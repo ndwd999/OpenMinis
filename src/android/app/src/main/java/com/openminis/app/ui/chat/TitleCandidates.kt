@@ -192,11 +192,10 @@ internal object TitleCandidates {
     }
 
     /**
-     * Build a provider for one candidate: usable key (keyless self-hosted
-     * endpoints and OAuth instances included), OAuth token refreshed first so
-     * an expired cached token does not 401 the title call, tagged with the
-     * chat id (OpenCode Go needs `x-opencode-session`). Null when the entry
-     * cannot be driven at all — the walk then moves on.
+     * Build a provider for one candidate: a usable key, or a keyless
+     * self-hosted endpoint, tagged with the chat id (OpenCode Go needs
+     * `x-opencode-session`). Null when the entry cannot be driven at all —
+     * the walk then moves on.
      */
     suspend fun providerFor(
         repo: ProviderRepository,
@@ -205,20 +204,8 @@ internal object TitleCandidates {
         sessionId: String,
     ): LLMProvider? {
         val instance = repo.instance(entry.providerInstanceId) ?: return null
-        var apiKey = repo.usableApiKey(instance)
+        val apiKey = repo.usableApiKey(instance)
             ?: if (repo.hasAnyCredential(instance)) "" else return null
-        if (instance.credentialType == com.openminis.app.data.model.ProviderCredential.oauth) {
-            try {
-                val manager = com.openminis.app.auth.OAuthManager.forInstance(context, instance)
-                val fresh = manager?.validAccessToken()
-                if (fresh != null && fresh != apiKey) {
-                    repo.saveApiKey(instance.id, fresh)
-                    apiKey = fresh
-                }
-            } catch (e: Exception) {
-                Log.w("TitleGen", "OAuth refresh failed for ${entry.model.id}: ${e.message}")
-            }
-        }
         return try {
             ProviderFactory.create(instance, apiKey, entry.model, context, sessionId = sessionId, overrides = entry.overrides)
         } catch (e: Exception) {

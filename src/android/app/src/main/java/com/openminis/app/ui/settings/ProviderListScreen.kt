@@ -199,27 +199,10 @@ fun ProviderListScreen(
                         key(instance.id) {
                             val modelCount = providerRepository.visibleEntries(instance.id).size
                             val apiKey = providerRepository.loadApiKey(instance.id)
-                            // Mirrors iOS `isConfigured` on ProviderInstancesView:
-                            // for OAuth providers, having a manual bearer token OR
-                            // a stored OAuth credential counts as "configured" — not
-                            // just the presence of an API key. Without this, OAuth
-                            // instances always show the gray dot even after a
-                            // successful sign-in or manual token paste.
-                            val isConfigured = if (instance.credentialType ==
-                                com.openminis.app.data.model.ProviderCredential.oauth) {
-                                val mgr = com.openminis.app.auth.OAuthManager.forInstance(context, instance)
-                                mgr?.isAuthenticated() == true
-                            } else {
-                                // [T-empty-key-compat-endpoints] A keyless
-                                // third-party compatible endpoint is
-                                // configured-by-definition (mirrors iOS).
-                                !apiKey.isNullOrBlank() || instance.allowsEmptyAPIKey
-                            }
-                            // [T-oauth-keep-credentials] Refresh rejected: the
-                            // credential is kept but the row renders red.
-                            val needsReauth = instance.credentialType ==
-                                com.openminis.app.data.model.ProviderCredential.oauth &&
-                                com.openminis.app.auth.OAuthManager.needsReauth(context, instance.id)
+                            // [T-empty-key-compat-endpoints] A keyless
+                            // third-party compatible endpoint is
+                            // configured-by-definition (mirrors iOS).
+                            val isConfigured = !apiKey.isNullOrBlank() || instance.allowsEmptyAPIKey
                             // Lift the dragged row above its neighbours so it
                             // reads as "picked up" (matches ModelGroupsScreen).
                             val elevation by animateDpAsState(
@@ -265,7 +248,6 @@ fun ProviderListScreen(
                                         modelCount = modelCount,
                                         apiKey = apiKey,
                                         isConfigured = isConfigured,
-                                        needsReauth = needsReauth,
                                         onClick = { onProviderClick(instance.id) },
                                     )
                                 }
@@ -397,7 +379,6 @@ private fun ProviderInstanceRow(
     modelCount: Int,
     apiKey: String?,
     isConfigured: Boolean,
-    needsReauth: Boolean = false,
     onClick: () -> Unit,
 ) {
     val isActive = isConfigured && instance.isEnabled
@@ -413,9 +394,8 @@ private fun ProviderInstanceRow(
             modifier = Modifier
                 .size(8.dp)
                 .background(
-                    color = if (needsReauth) MaterialTheme.colorScheme.error
-                        else if (isActive) Color(0xFF34C759)
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
+                    color = if (isActive) Color(0xFF34C759)
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
                     shape = CircleShape,
                 ),
         )
@@ -449,13 +429,11 @@ private fun ProviderInstanceRow(
                 Text(
                     // [T-empty-key-compat-endpoints] Keyless compatible endpoint:
                     // say so instead of the alarming "No API key".
-                    text = if (needsReauth) stringResource(R.string.provider_oauth_sign_in_expired)
-                        else if (!apiKey.isNullOrBlank()) maskKey(apiKey)
+                    text = if (!apiKey.isNullOrBlank()) maskKey(apiKey)
                         else if (instance.allowsEmptyAPIKey) stringResource(R.string.provider_no_key_required)
                         else "No API key",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (needsReauth) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
             }

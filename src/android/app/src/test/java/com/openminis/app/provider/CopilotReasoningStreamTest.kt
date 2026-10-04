@@ -277,29 +277,7 @@ class CopilotReasoningStreamTest {
         )
     }
 
-    /**
-     * The capability half of the same commit, pinned by source because
-     * CopilotDeviceFlowTest owns the behavioural rows: Copilot's reasoning
-     * signals are `adaptive_thinking` and a `reasoning_effort` tier list, NOT
-     * `supports.thinking`. Kept here so the two halves of "Copilot reasoning
-     * works" fail together — a parser that streams reasoning for a model the
-     * catalog says cannot reason is still a blank pane, because every thinking
-     * gate in the app tests `== true` and a null reads as "no".
-     */
-    @Test
-    fun `the Copilot model parser still reads the fields Copilot actually sends`() {
-        val src = ProductionSources.read("auth/CopilotDeviceFlow.kt")
-        assertTrue(
-            "adaptive_thinking is one of the two real reasoning signals",
-            src.contains("adaptive_thinking"),
-        )
-        assertTrue(
-            "…and a reasoning_effort tier list is the other",
-            src.contains("reasoning_effort"),
-        )
-        assertTrue(
-            "the legacy key is kept only as a FALLBACK — Copilot never sends it",
-            src.contains("thinking"),
-        )
-    }
+    // The Copilot catalog-parser assertions that used to follow lived here and
+    // were removed with the Copilot device-flow fetchers they read: that parser
+    // existed only to translate a two-tier session-token response.
 }

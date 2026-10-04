@@ -2796,10 +2796,8 @@ class ChatViewModel(
      * matches the official fast catalog gpt-5.6-sol/terra/luna, gpt-5.5,
      * gpt-5.4) AND the request travels the Responses path — the instance has
      * useResponsesAPI on (any credential/base; Responses relays like sub2api
-     * pass the tier through) OR it's the Codex OAuth route (OpenAI type +
-     * oauth credential + no custom base URL). Chat-completions providers stay
-     * excluded. Recomputes on entry/config changes like the Enhanced Cache
-     * gate above.
+     * pass the tier through). Chat-completions providers stay excluded.
+     * Recomputes on entry/config changes like the Enhanced Cache gate above.
      *
      * [T-android-xai-priority] xAI is a second, independent branch: xAI's
      * Priority Processing is the same `service_tier: "priority"` wire field
@@ -2817,17 +2815,13 @@ class ChatViewModel(
         ) { entryId, config ->
             val entry = entryId?.let { id -> config.modelEntries.find { it.id == id } }
             val instance = entry?.let { e -> config.instances.find { it.id == e.providerInstanceId } }
-            val isCodexOAuth = instance != null &&
-                instance.providerType == com.openminis.app.data.model.ProviderType.openAI &&
-                instance.credentialType == com.openminis.app.data.model.ProviderCredential.oauth &&
-                instance.customBaseURL.isNullOrBlank()
             val isXAI = instance?.providerType == com.openminis.app.data.model.ProviderType.xAI
             entry != null && instance != null &&
                 (
                     isXAI ||
                         (
                             entry.model.id.contains("gpt", ignoreCase = true) &&
-                                (instance.useResponsesAPI || isCodexOAuth)
+                                instance.useResponsesAPI
                             )
                     )
         }.stateIn(
@@ -4008,8 +4002,8 @@ class ChatViewModel(
             // compact ran stayed in the dashed "queued" state forever. Reuse
             // resumeQueueAfterCancel: it re-checks queue-non-empty + not-
             // streaming + not-compacting after its grace delay (so an ✕ tap at
-            // the compact-finish instant is a clean no-op), refreshes OAuth,
-            // and drains through the normal stream-slot machinery — no new
+            // the compact-finish instant is a clean no-op) and drains through
+            // the normal stream-slot machinery — no new
             // reentrancy path. Runs after `finally` so isCompacting is already
             // false. Mirrors the iOS fix for the same report.
             if (compactSucceeded && _promptQueue.value.isNotEmpty()) {
@@ -6290,8 +6284,8 @@ class ChatViewModel(
                     if (instance != null) {
                         // [T-android-group-resolve-skip-uncredentialed] Gate on
                         // hasAnyCredential — keying off the API key alone left a
-                        // session whose model lives on an OAuth provider unable
-                        // to restore, despite being signed in.
+                        // session whose model has no credential at all unable
+                        // to restore.
                         val apiKey = providerRepository.usableApiKey(instance) ?: ""
                         if (providerRepository.hasAnyCredential(instance)) {
                             currentProvider = ProviderFactory.create(instance, apiKey, entry.model, context, sessionId = activeSessionId, overrides = entry.overrides)
@@ -6966,7 +6960,8 @@ class ChatViewModel(
                     val entry = providerRepository.config.value.modelEntries.find { it.id == entryId } ?: return false
                     val instance = providerRepository.instance(entry.providerInstanceId) ?: return false
                     // [T-android-group-resolve-skip-uncredentialed] An explicit
-                    // entry pin on an OAuth provider must restore too.
+                    // entry pin on an uncredentialed provider must not restore
+                    // either.
                     if (!providerRepository.hasAnyCredential(instance)) return false
                     val apiKey = providerRepository.usableApiKey(instance) ?: ""
                     currentModel = entry.model
@@ -7041,8 +7036,8 @@ class ChatViewModel(
 
         val instance = providerRepository.instance(targetEntry.providerInstanceId) ?: return false
         // Non-null by construction: availableMemberEntries already required a
-        // credential. An OAuth instance has no API key to pass — the factory
-        // reads its token from storage — so "" is the correct argument there.
+        // credential. A keyless self-hosted instance has no API key to pass —
+        // the factory is happy with "" — so "" is the correct argument there.
         val apiKey = providerRepository.usableApiKey(instance) ?: ""
 
         currentModel = targetEntry.model
@@ -7188,18 +7183,16 @@ class ChatViewModel(
     private var pendingModelSwitch = false
 
     /**
-     * [T-android-switch-model-next-request] [prompt] for [provider]: with the
-     * Claude Code prefix Anthropic OAuth requires, without it for anything
-     * else (it is that login's identity string, not ours to send elsewhere).
-     * The rest of the prompt is not model-specific on Android.
+     * [T-android-switch-model-next-request] [prompt] for [provider].
+     *
+     * OAuth is gone, so there is no per-provider system-prompt prefix left to
+     * add or strip — this used to wrap Anthropic OAuth logins with the Claude
+     * Code identity string. Kept (instead of inlined at the call site) as a
+     * no-op so the caller stays readable; [provider] is now unused and only
+     * remains to preserve the signature.
      */
-    private fun systemPromptFor(provider: LLMProvider, prompt: String?): String? {
-        val prefix = com.openminis.app.auth.ClaudeOAuthManager.ANTHROPIC_OAUTH_IDENTIFIER_PROMPT
-        if (prompt == null || prefix.isEmpty()) return prompt
-        val bare = if (prompt.startsWith(prefix)) prompt.removePrefix(prefix).trimStart('\n') else prompt
-        val oauth = (provider as? com.openminis.app.provider.anthropic.AnthropicProvider)?.isOAuth == true
-        return if (oauth) "$prefix\n\n$bare" else bare
-    }
+    @Suppress("UNUSED_PARAMETER")
+    private fun systemPromptFor(provider: LLMProvider, prompt: String?): String? = prompt
 
     private fun isBoundToAbandonedModel(): Boolean =
         _autoRetryAttempt.value > 0 || _autoRetryCountdown.value > 0
@@ -7326,8 +7319,9 @@ class ChatViewModel(
         _activeEntryId.value = entry.id
         _providerName.value = instance.label.ifEmpty { entry.model.provider }
         // [T-android-group-resolve-skip-uncredentialed] Build the provider for
-        // an OAuth instance too — otherwise this tier set the model name in the
-        // UI but left currentProvider null, and the first send failed.
+        // a keyless self-hosted instance too — otherwise this tier set the model
+        // name in the UI but left currentProvider null, and the first send
+        // failed.
         if (providerRepository.hasAnyCredential(instance)) {
             val apiKey = providerRepository.usableApiKey(instance) ?: ""
             currentProvider = ProviderFactory.create(instance, apiKey, entry.model, context, sessionId = activeSessionId, overrides = entry.overrides)
@@ -7365,7 +7359,7 @@ class ChatViewModel(
         val instance = providerRepository.instance(entry.providerInstanceId) ?: return
         // [T-android-group-resolve-skip-uncredentialed] The user explicitly
         // tapped this model; refusing it because the API-key slot is empty
-        // made OAuth models unselectable from the picker.
+        // made keyless self-hosted models unselectable from the picker.
         if (!providerRepository.hasAnyCredential(instance)) return
         val apiKey = providerRepository.usableApiKey(instance) ?: ""
         cancelWorkBoundToPreviousModel("selectEntry")
@@ -7451,9 +7445,9 @@ class ChatViewModel(
             val instance = config.instances.find { it.id == entry.providerInstanceId } ?: continue
             if (!instance.isEnabled) continue
             // [T-android-group-resolve-skip-uncredentialed] Credential test via
-            // hasAnyCredential so an OAuth-logged-in provider is kept as a
+            // hasAnyCredential so a keyless self-hosted provider is kept as a
             // fallback candidate; usableApiKey alone reads only the API-key
-            // slot and dropped every OAuth member from the chain.
+            // slot and dropped it from the chain.
             if (!providerRepository.hasAnyCredential(instance)) continue
             val apiKey = providerRepository.usableApiKey(instance) ?: ""
             val p = try {
@@ -7597,7 +7591,7 @@ class ChatViewModel(
             // single-step variant here had the same bug.
             if (!instance.isEnabled) continue
             // [T-android-group-resolve-skip-uncredentialed] Same credential
-            // notion as buildFallbackProviders — OAuth members belong in the
+            // notion as buildFallbackProviders — keyless members belong in the
             // single-step chain too.
             if (!providerRepository.hasAnyCredential(instance)) continue
             val apiKey = providerRepository.usableApiKey(instance) ?: ""
@@ -8050,7 +8044,7 @@ class ChatViewModel(
         // T145: claim the streaming flag SYNCHRONOUSLY so a rapid second tap
         // (or any concurrent send/retry attempt) is rejected by the entry
         // guard. Previously this was set inside the suspended outer launch,
-        // leaving a multi-second window during DB cleanup + OAuth refresh
+        // leaving a multi-second window during DB cleanup
         // where two retries could slip through and spawn duplicate streamJobs.
         // The orphaned first job's `_isStreaming = false` at completion would
         // then flip the UI to "stopped" while the second job was still running.
@@ -8238,62 +8232,21 @@ class ChatViewModel(
 
     /**
      * [T-android-rerun-from-tool-block-position] Shared streaming tail used by
-     * both [retryFromMessage] and [rerunFromToolBlock]: refresh the OAuth
-     * token if needed, build the (OAuth-prefixed) system prompt, and launch
-     * the agent-loop stream job. Callers must have already (a) claimed
-     * `_isStreaming = true` synchronously, (b) truncated UI + DB to the desired
-     * re-entry point, and (c) rebuilt [agentHistory]. Returns true once the
-     * stream job is launched (the caller's outer `finally` resets
-     * `_isStreaming` only when this returns false / throws first).
+     * both [retryFromMessage] and [rerunFromToolBlock]: build the system
+     * prompt and launch the agent-loop stream job. Callers must have already
+     * (a) claimed `_isStreaming = true` synchronously, (b) truncated UI + DB
+     * to the desired re-entry point, and (c) rebuilt [agentHistory]. Returns
+     * true once the stream job is launched (the caller's outer `finally`
+     * resets `_isStreaming` only when this returns false / throws first).
      */
     private suspend fun runRerunStreamTail(
         initialProvider: LLMProvider,
         label: String,
     ): Boolean {
-        var provider = initialProvider
-        // Refresh OAuth token if needed
-        if ((provider as? com.openminis.app.provider.anthropic.AnthropicProvider)?.isOAuth == true) {
-            try {
-                val activeEntryId = _activeEntryId.value
-                val entry = activeEntryId?.let { id -> providerRepository.config.value.modelEntries.find { it.id == id } }
-                val instance = entry?.let { e -> providerRepository.config.value.instances.find { it.id == e.providerInstanceId } }
-                if (instance != null) {
-                    val manager = com.openminis.app.auth.OAuthManager.forInstance(context, instance)
-                    val freshToken = manager?.validAccessToken()
-                    if (freshToken != null) {
-                        val storedKey = providerRepository.loadApiKey(instance.id)
-                        if (freshToken != storedKey) {
-                            providerRepository.saveApiKey(instance.id, freshToken)
-                            provider = com.openminis.app.provider.ProviderFactory.create(
-                                instance, freshToken, currentModel ?: provider.model, context,
-                                sessionId = activeSessionId,
-                                // [T-android-model-custom-params] Carry the
-                                // overrides across a token-refresh rebuild. No
-                                // entry is in scope here, but the provider being
-                                // replaced already holds them — without this a
-                                // refresh would silently drop the user's
-                                // temperature/headers mid-conversation.
-                                overrides = (provider as? com.openminis.app.provider.openai.OpenAIProvider)
-                                    ?.modelOverrides,
-                            )
-                            currentProvider = provider
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "OAuth token refresh failed: ${e.message}")
-            }
-        }
-
-        val baseSystemPrompt = buildSystemPrompt()
-        val systemPrompt = if ((provider as? com.openminis.app.provider.anthropic.AnthropicProvider)?.isOAuth == true) {
-            val prefix = com.openminis.app.auth.ClaudeOAuthManager.ANTHROPIC_OAUTH_IDENTIFIER_PROMPT
-            if (baseSystemPrompt?.startsWith(prefix) == true) baseSystemPrompt
-            else "$prefix\n\n${baseSystemPrompt ?: ""}"
-        } else baseSystemPrompt
+        val systemPrompt = buildSystemPrompt()
 
         // _isStreaming was already set synchronously by the caller.
-        val launchedProvider = provider
+        val launchedProvider = initialProvider
         streamJob = viewModelScope.launch(Dispatchers.IO) {
             AppLogger.info(TAG_STREAM, "$label streamJob ENTER sid=$activeSessionId")
             try {
@@ -9191,7 +9144,7 @@ class ChatViewModel(
             _error.value = "No provider configured"
             return SubmitOutcome.Rejected("no_provider")
         }
-        var provider: LLMProvider = initialProvider
+        val provider: LLMProvider = initialProvider
 
         _error.value = null
 
@@ -9199,7 +9152,7 @@ class ChatViewModel(
         clearAttachments()
 
         // T145: claim _isStreaming synchronously so a rapid second tap can't
-        // slip past the entry guard during DB/OAuth setup. See retryFromMessage.
+        // slip past the entry guard during DB setup. See retryFromMessage.
         AppLogger.info(TAG_STREAM, "send _isStreaming=true (sync, sid=$activeSessionId)")
         _isStreaming.value = true
 
@@ -9331,47 +9284,8 @@ class ChatViewModel(
                 dbMessageId = persistedUser.id,
             ))
 
-            // Refresh OAuth token if needed before sending (mirrors iOS validAccessToken)
-            if ((provider as? com.openminis.app.provider.anthropic.AnthropicProvider)?.isOAuth == true) {
-                try {
-                    val activeEntryId = _activeEntryId.value
-                    val entry = activeEntryId?.let { id -> providerRepository.config.value.modelEntries.find { it.id == id } }
-                    val instance = entry?.let { e -> providerRepository.config.value.instances.find { it.id == e.providerInstanceId } }
-                    if (instance != null) {
-                        val manager = com.openminis.app.auth.OAuthManager.forInstance(context, instance)
-                        val freshToken = manager?.validAccessToken()
-                        if (freshToken != null) {
-                            val storedKey = providerRepository.loadApiKey(instance.id)
-                            if (freshToken != storedKey) {
-                                providerRepository.saveApiKey(instance.id, freshToken)
-                                // Recreate provider with fresh token
-                                provider = com.openminis.app.provider.ProviderFactory.create(
-                                    instance, freshToken, currentModel ?: provider.model, context,
-                                    sessionId = activeSessionId,
-                                    // [T-android-model-custom-params] See the
-                                    // sibling refresh site: carry overrides
-                                    // across the rebuild.
-                                    overrides = (provider as? com.openminis.app.provider.openai.OpenAIProvider)
-                                        ?.modelOverrides,
-                                )
-                                currentProvider = provider
-                                android.util.Log.i(TAG, "OAuth token refreshed before send")
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.w(TAG, "OAuth token refresh failed: ${e.message}")
-                }
-            }
-
             // Build system prompt
-            // Anthropic OAuth requires the Claude Code prefix in the system prompt
-            val baseSystemPrompt = buildSystemPrompt()
-            val systemPrompt = if ((provider as? com.openminis.app.provider.anthropic.AnthropicProvider)?.isOAuth == true) {
-                val prefix = com.openminis.app.auth.ClaudeOAuthManager.ANTHROPIC_OAUTH_IDENTIFIER_PROMPT
-                if (baseSystemPrompt?.startsWith(prefix) == true) baseSystemPrompt
-                else "$prefix\n\n${baseSystemPrompt ?: ""}"
-            } else baseSystemPrompt
+            val systemPrompt = buildSystemPrompt()
 
             // Start agent loop with fallback. _isStreaming was set synchronously at top.
             streamLaunched = true
@@ -9683,7 +9597,7 @@ class ChatViewModel(
         }
 
         val initialProvider = currentProvider ?: return
-        var provider: LLMProvider = initialProvider
+        val provider: LLMProvider = initialProvider
         _error.value = null
 
         // T145: claim _isStreaming synchronously — see retryFromMessage for rationale.
@@ -9721,35 +9635,7 @@ class ChatViewModel(
                 )
             }
 
-            // Refresh OAuth token if needed
-            if ((provider as? com.openminis.app.provider.anthropic.AnthropicProvider)?.isOAuth == true) {
-                try {
-                    val activeEntryId = _activeEntryId.value
-                    val entry = activeEntryId?.let { id -> providerRepository.config.value.modelEntries.find { it.id == id } }
-                    val instance = entry?.let { e -> providerRepository.config.value.instances.find { it.id == e.providerInstanceId } }
-                    if (instance != null) {
-                        val manager = com.openminis.app.auth.OAuthManager.forInstance(context, instance)
-                        val freshToken = manager?.validAccessToken()
-                        if (freshToken != null) {
-                            val storedKey = providerRepository.loadApiKey(instance.id)
-                            if (freshToken != storedKey) {
-                                providerRepository.saveApiKey(instance.id, freshToken)
-                                provider = ProviderFactory.create(instance, freshToken, currentModel ?: provider.model, context, sessionId = activeSessionId, overrides = (provider as? com.openminis.app.provider.openai.OpenAIProvider)?.modelOverrides)
-                                currentProvider = provider
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "OAuth token refresh failed: ${e.message}")
-                }
-            }
-
-            val baseSystemPrompt = buildSystemPrompt()
-            val systemPrompt = if ((provider as? com.openminis.app.provider.anthropic.AnthropicProvider)?.isOAuth == true) {
-                val prefix = com.openminis.app.auth.ClaudeOAuthManager.ANTHROPIC_OAUTH_IDENTIFIER_PROMPT
-                if (baseSystemPrompt?.startsWith(prefix) == true) baseSystemPrompt
-                else "$prefix\n\n${baseSystemPrompt ?: ""}"
-            } else baseSystemPrompt
+            val systemPrompt = buildSystemPrompt()
 
             // _isStreaming was already set synchronously at the top.
             streamLaunched = true
@@ -10603,8 +10489,7 @@ class ChatViewModel(
         }
 
         // [T-android-switch-model-next-request] The prompt this loop sends. A
-        // var only for the mid-turn switch: the Claude Code OAuth prefix is
-        // the one provider-specific part of it.
+        // var only for the mid-turn switch.
         var loopSystemPrompt = systemPrompt
         // A flag left over from a turn that ended before it could be applied
         // is stale once this turn starts on the class-level provider; a switch
@@ -15905,7 +15790,7 @@ Scheduled tasks: crontab / at / nohup loops will stop when the app is suspended,
             AppLogger.info("TitleGen", "skip guard=title-already-set title='${_sessionTitle.value.take(200)}'")
             return
         }
-        // Prefer a dedicated sub-model (cheap, non-OAuth) — mirrors iOS resolveSubEntry.
+        // Prefer a dedicated sub-model (cheap) — mirrors iOS resolveSubEntry.
         // Falls back to the primary provider if no sub-group is configured.
         // [T-title-gen-fallback-first-message-android] If no provider can be
         // resolved at all, the session would silently stay "New Chat". Log the
@@ -16049,11 +15934,7 @@ Scheduled tasks: crontab / at / nohup loops will stop when the app is suspended,
                 // [T-android-titlegen-systemprompt-unify] Shared with the manual
                 // Regenerate path (SessionListViewModel.regenerateTitle) via the
                 // single TITLE_GEN_SYSTEM_PROMPT constant so the two never drift.
-                // Passed bare: for OAuth Anthropic instances,
-                // AnthropicProvider.resolveSystemPrompt force-prepends the Claude
-                // Code prefix block at the provider layer (and strips a
-                // caller-supplied one), so no caller-side prepend is needed — the
-                // previous manual prefix branch here was redundant.
+                // Passed bare: no caller-side prepend is needed.
                 val effectiveSystemPrompt = TITLE_GEN_SYSTEM_PROMPT
 
                 // One title request against one model; null = no usable title
@@ -16455,8 +16336,8 @@ Scheduled tasks: crontab / at / nohup loops will stop when the app is suspended,
      * retried) → noop return.
      *
      * Provider / systemPrompt / fallback resolution mirrors [sendMessage]
-     * verbatim (incl. OAuth token refresh + Claude Code prefix), so a queued
-     * prompt drain after cancel uses the same plumbing as a fresh send.
+     * verbatim, so a queued prompt drain after cancel uses the same plumbing
+     * as a fresh send.
      */
     private fun resumeQueueAfterCancel() {
         viewModelScope.launch {
@@ -16480,45 +16361,9 @@ Scheduled tasks: crontab / at / nohup loops will stop when the app is suspended,
                 _messages.value = _messages.value.filterNot { it.isQueued }
                 return@launch
             }
-            var provider: LLMProvider = initialProvider
+            val provider: LLMProvider = initialProvider
 
-            // Refresh OAuth token if needed (mirrors sendMessage L2477-2501).
-            if ((provider as? com.openminis.app.provider.anthropic.AnthropicProvider)?.isOAuth == true) {
-                try {
-                    val activeEntryId = _activeEntryId.value
-                    val entry = activeEntryId?.let { id -> providerRepository.config.value.modelEntries.find { it.id == id } }
-                    val instance = entry?.let { e -> providerRepository.config.value.instances.find { it.id == e.providerInstanceId } }
-                    if (instance != null) {
-                        val manager = com.openminis.app.auth.OAuthManager.forInstance(context, instance)
-                        val freshToken = manager?.validAccessToken()
-                        if (freshToken != null) {
-                            val storedKey = providerRepository.loadApiKey(instance.id)
-                            if (freshToken != storedKey) {
-                                providerRepository.saveApiKey(instance.id, freshToken)
-                                provider = com.openminis.app.provider.ProviderFactory.create(
-                                    instance, freshToken, currentModel ?: provider.model, context,
-                                    sessionId = activeSessionId,
-                                    // [T-android-model-custom-params] See the
-                                    // sibling refresh site: carry overrides
-                                    // across the rebuild.
-                                    overrides = (provider as? com.openminis.app.provider.openai.OpenAIProvider)
-                                        ?.modelOverrides,
-                                )
-                                currentProvider = provider
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "OAuth token refresh failed (resumeQueueAfterCancel): ${e.message}")
-                }
-            }
-
-            val baseSystemPrompt = buildSystemPrompt()
-            val systemPrompt = if ((provider as? com.openminis.app.provider.anthropic.AnthropicProvider)?.isOAuth == true) {
-                val prefix = com.openminis.app.auth.ClaudeOAuthManager.ANTHROPIC_OAUTH_IDENTIFIER_PROMPT
-                if (baseSystemPrompt?.startsWith(prefix) == true) baseSystemPrompt
-                else "$prefix\n\n${baseSystemPrompt ?: ""}"
-            } else baseSystemPrompt
+            val systemPrompt = buildSystemPrompt()
 
             // T145: claim the streaming flag synchronously before launching
             // the streamJob so a concurrent send/retry tap is rejected by the
@@ -16807,13 +16652,7 @@ Scheduled tasks: crontab / at / nohup loops will stop when the app is suspended,
         }
 
         viewModelScope.launch {
-            val baseSystemPrompt = buildSystemPrompt()
-            val systemPrompt =
-                if ((provider as? com.openminis.app.provider.anthropic.AnthropicProvider)?.isOAuth == true) {
-                    val prefix = com.openminis.app.auth.ClaudeOAuthManager.ANTHROPIC_OAUTH_IDENTIFIER_PROMPT
-                    if (baseSystemPrompt?.startsWith(prefix) == true) baseSystemPrompt
-                    else "$prefix\n\n${baseSystemPrompt ?: ""}"
-                } else baseSystemPrompt
+            val systemPrompt = buildSystemPrompt()
 
             AppLogger.info(TAG_STREAM, "resume _isStreaming=true (sid=$activeSessionId)")
             _isStreaming.value = true

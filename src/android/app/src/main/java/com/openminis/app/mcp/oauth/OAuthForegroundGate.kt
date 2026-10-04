@@ -1,4 +1,4 @@
-package com.openminis.app.auth
+package com.openminis.app.mcp.oauth
 
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver

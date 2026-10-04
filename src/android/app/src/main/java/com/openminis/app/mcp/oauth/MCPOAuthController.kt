@@ -3,7 +3,6 @@ package com.openminis.app.mcp.oauth
 import android.content.Context
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
-import com.openminis.app.auth.OAuthCallbackServer
 import com.openminis.app.logging.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -22,7 +21,7 @@ import kotlin.coroutines.resume
  * [T-android-mcp-oauth] Drives the MCP Static-OAuth PKCE Authorization Code
  * flow (RFC 7636 + RFC 8252 loopback redirect + RFC 8707 resource). Android
  * port of iOS `MCPOAuthController.authorize`, reusing the app's existing
- * [OAuthCallbackServer] + Chrome Custom Tab pattern (same as ClaudeOAuthManager).
+ * [OAuthCallbackServer] + Chrome Custom Tab pattern.
  *
  * Phase 2 scope: authorize() runs the browser round-trip and token exchange and
  * stores the issued tokens in [MCPOAuthStore]. The in-guest transport bridge
@@ -97,7 +96,7 @@ class MCPOAuthController(private val context: Context) {
                     }
 
                     // Do NOT set FLAG_ACTIVITY_NEW_TASK — MainActivity is
-                    // singleTask (matches ClaudeOAuthManager's note about IME).
+                    // singleTask so the browser's return does not restart the task.
                     CustomTabsIntent.Builder().setShowTitle(true).build()
                         .launchUrl(context, Uri.parse(authUrl))
                     AppLogger.info(TAG, "[Authorize] '$server' opened Custom Tab")
@@ -119,7 +118,7 @@ class MCPOAuthController(private val context: Context) {
             // (blocked=APP_BACKGROUND): the exchange failed in ~10 ms with
             // "Unable to resolve host". Same gate the provider OAuth managers
             // use (dcf6085db) — exchange only once the user is back.
-            com.openminis.app.auth.OAuthForegroundGate.awaitForeground(TAG)
+            OAuthForegroundGate.awaitForeground(TAG)
             exchangeCode(server, oauth, redirect, resource, code, pkce.verifier)
         }
     }
@@ -213,8 +212,8 @@ class MCPOAuthController(private val context: Context) {
             }
         }
 
-        /** Fixed loopback port for MCP OAuth — distinct from ClaudeOAuthManager's
-         *  54545 so a concurrent login never collides. Mirrors iOS 54546. */
+        /** Fixed loopback port for MCP OAuth, distinct from any provider login
+         *  port, so a concurrent login never collides. Mirrors iOS 54546. */
         const val LOOPBACK_PORT = 54546
         const val DEFAULT_REDIRECT_URI = "http://localhost:$LOOPBACK_PORT/callback"
     }

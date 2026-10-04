@@ -16,60 +16,35 @@ enum class ProviderType(val displayName: String) {
     anthropic("Anthropic"),
     gemini("Google Gemini"),
     openAI("OpenAI"),
+
+    /**
+     * [T-android-provider-type-parity] The cases below are DECODE-ONLY.
+     *
+     * This build ships three API shapes — OpenAI-compatible, Anthropic, and
+     * Gemini — and every provider that spoke one of them through a bespoke
+     * stack (OpenRouter, xAI, Kimi Code, GitHub Copilot) now reaches it the
+     * same way: as an `openAI` instance with a custom base URL. The cases are
+     * kept so a config, sync payload, or shared instance written by another
+     * build still DECODES instead of throwing: kotlinx.serialization aborts on
+     * an unknown enum name, so deleting `xAI` outright would take the whole
+     * document down with it and cost the user every provider in it. They are
+     * never offered in AddProviderScreen.
+     *
+     * `openAIResponses` is a special case: it is not a fourth vendor but
+     * "OpenAI, forced to the Responses endpoint", so it remains fully usable
+     * (it maps onto [openAI] with the endpoint forced on).
+     */
     openRouter("OpenRouter"),
     xAI("xAI (Grok)"),
-    // [T-kimi-oauth] Kimi Code (Coding Plan) — RFC 8628 device-code OAuth,
-    // OpenAI-compatible upstream at api.kimi.com/coding/v1. DB round-trip is
-    // name-based (ProviderCredential.valueOf), so appending is migration-safe.
     kimiCode("Kimi Code"),
-
-    /**
-     * [T-copilot-provider] GitHub Copilot via device-flow OAuth. Chat is
-     * OpenAI-compatible at api.githubcopilot.com, but auth is two-tier (see
-     * CopilotOAuthManager), which is why it cannot reuse the API-key path.
-     *
-     * ⚠️ Unofficial: borrows the VS Code client identity, and GitHub's terms
-     * treat proxying Copilot as grounds for account restriction. Gated behind
-     * CopilotFeatureFlag (default off) and an explicit in-app risk notice.
-     *
-     * Appended last — DB round-trips are name-based (ProviderCredential.valueOf),
-     * so adding a case is migration-safe.
-     */
     githubCopilot("GitHub Copilot"),
-
-    // [T-android-provider-type-parity] The cases below exist on iOS but were
-    // missing here. They are declared so a cross-platform restore or sync can
-    // DECODE them: without a case, kotlinx.serialization throws on the unknown
-    // name and takes the whole provider_config.json with it — one iOS-only
-    // provider silently cost the user every provider in the package,
-    // credentials included.
-    //
-    // Declared but not offered: `addableProviderTypes` in AddProviderScreen is
-    // a curated list, so these never appear as something the user can create
-    // here; they arrive only from an iOS package or a newer build.
-
-    /**
-     * OpenAI Responses API (`/v1/responses`). iOS `openAIResponses`.
-     *
-     * Fully usable on Android: it is exactly "OpenAI, forced to the Responses
-     * endpoint", which the existing OpenAI path already expresses through
-     * `ProviderInstance.useResponsesAPI` (iOS spells the same thing
-     * `forceResponsesAPI`). So a restored iOS instance of this type WORKS
-     * rather than merely surviving the import.
-     */
     openAIResponses("Responses API (v3)"),
-
-    /**
-     * iOS `antigravity`. Decode-only here — Android has no implementation, so
-     * an instance restores and is visible but cannot serve a request.
-     */
     antigravity("Antigravity"),
 
     /**
-     * Sentinel for a provider type THIS build doesn't recognize — e.g. a newer
-     * build's package naming a type added after this release. Decoding to this
-     * preserves the instance (shown as unusable) instead of destroying the file
-     * it arrived in. Mirrors iOS `ProviderType.unsupported`.
+     * Sentinel for a provider type THIS build doesn't recognize. Decoding to
+     * this preserves the instance (shown as unusable) instead of destroying
+     * the file it arrived in.
      *
      * Never write this back as an instance's type where the original string is
      * still available; it is a read-side fallback, not a real provider.
@@ -77,18 +52,32 @@ enum class ProviderType(val displayName: String) {
     unsupported("Unsupported");
 
     /**
-     * [T-android-provider-type-parity] True for types this build can decode and
-     * display but cannot actually drive a request with. Callers that need a
-     * working provider must check this rather than assuming every enum case is
-     * usable.
+     * True for types this build can actually drive a request with. Callers
+     * that need a working provider must check this rather than assuming every
+     * enum case is usable.
+     *
+     * The decode-only cases above are all OpenAI-compatible, so they resolve
+     * through the OpenAI provider with their own base URL rather than being
+     * rejected — a restored instance stays usable instead of becoming a dead
+     * row the user has to delete.
      */
     val isUsable: Boolean
         get() = when (this) {
-            // openAIResponses included: it routes through the OpenAI provider
-            // with the Responses endpoint forced on.
             anthropic, gemini, openAI, openRouter, xAI, kimiCode, openAIResponses,
             githubCopilot -> true
             antigravity, unsupported -> false
+        }
+
+    /** The API shape this type is served by. */
+    val wireFormat: WireFormat
+        get() = when (this) {
+            anthropic -> WireFormat.anthropic
+            gemini -> WireFormat.gemini
+            // Everything else that isUsable speaks the OpenAI-compatible
+            // dialect; only the base URL and headers differ per vendor.
+            openAI, openRouter, xAI, kimiCode, githubCopilot, openAIResponses ->
+                WireFormat.openAI
+            antigravity, unsupported -> WireFormat.unsupported
         }
 
     val builtInModels: List<LLMModel>
@@ -96,16 +85,19 @@ enum class ProviderType(val displayName: String) {
             anthropic -> LLMModel.allAnthropic
             gemini -> LLMModel.allGemini
             openAI -> LLMModel.allOpenAI
-            openRouter -> LLMModel.allOpenRouter
-            xAI -> LLMModel.allXAI
-            kimiCode -> LLMModel.allKimi
-            // No built-in catalog for the decode-only types; models restored
-            // alongside the instance still appear as custom entries.
-            // [T-copilot-provider] Copilot's catalog is fetched live from
-            // /models — a hardcoded list would offer models the signed-in
-            // account may not be entitled to.
-            githubCopilot, openAIResponses, antigravity, unsupported -> emptyList()
+            // Vendor-specific catalogs are gone; these types are reachable
+            // only by decoding someone else's config, and their models arrive
+            // as custom entries alongside the instance.
+            openRouter, xAI, kimiCode, githubCopilot, openAIResponses,
+            antigravity, unsupported -> emptyList()
         }
+
+    /**
+     * The three request dialects this build speaks. Providers are grouped by
+     * this rather than by vendor, so adding a relay means adding a preset
+     * (base URL + headers), not a new provider implementation.
+     */
+    enum class WireFormat { openAI, anthropic, gemini, unsupported }
 
     companion object {
         /**
@@ -119,11 +111,31 @@ enum class ProviderType(val displayName: String) {
         fun decoded(raw: String): ProviderType =
             entries.firstOrNull { it.name == raw } ?: unsupported
     }
+
+    /**
+     * Decode a raw credential-type string without throwing. The `oauth` value
+     * is retired but still present in older databases, and `valueOf` on it is
+     * an [IllegalArgumentException] that would abort loading the provider
+     * config entirely — so every read path uses this and lands on [apiKey].
+     */
+    fun credentialDecoded(raw: String): ProviderCredential =
+        runCatching { ProviderCredential.valueOf(raw) }.getOrDefault(ProviderCredential.apiKey)
 }
 
 @Serializable
 enum class ProviderCredential {
     apiKey,
+
+    /**
+     * Retired. This build authenticates with API keys only — there is no OAuth
+     * code path left to reach.
+     *
+     * The case is kept ONLY so a database row written before the switch still
+     * decodes. Every parse site uses a tolerant decode that maps it to
+     * [apiKey], and nothing in the UI can produce or select it. Removing the
+     * case instead would make `ProviderCredential.valueOf("oauth")` throw on
+     * an old row and take the user's whole provider list down with it.
+     */
     oauth,
 }
 

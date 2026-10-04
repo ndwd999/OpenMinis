@@ -18,9 +18,9 @@ import javax.xml.parsers.DocumentBuilderFactory
  * sends bearer credentials to, found by grepping provider/auth code:
  *
  *   chatgpt.com            Codex OAuth access token (OpenAIProvider, Responses)
- *   github.com             Copilot device flow (CopilotDeviceFlow.DEVICE_CODE_URL)
+ *   github.com             (was: Copilot device flow; gone with OAuth)
  *   api.githubcopilot.com  Copilot session token on every chat request
- *   auth.kimi.com          Kimi device flow (KimiDeviceFlow.AUTH_HOST)
+ *   auth.kimi.com          (was: Kimi device flow; gone with OAuth)
  *
  * It also checks that a pinned domain does not inherit the base config's
  * cleartext permission: `http://api.anthropic.com` (a typo in a base URL)

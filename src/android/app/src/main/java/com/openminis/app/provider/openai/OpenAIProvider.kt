@@ -185,13 +185,6 @@ class OpenAIProvider private constructor(
         azureBase = azureBase,
     )
 
-    /** OAuth constructor (Codex Responses API). */
-    constructor(
-        oauthTokenProvider: suspend () -> String,
-        model: LLMModel = LLMModel.codexMini,
-        codexAccountId: String? = null,
-    ) : this(apiKey = null, oauthTokenProvider = oauthTokenProvider, model = model, codexAccountId = codexAccountId)
-
     companion object {
         /**
          * [T-codex-gpt-image25-android] The 2.5 image variants, which name
@@ -286,38 +279,6 @@ class OpenAIProvider private constructor(
          * [STREAM_TTFB_TIMEOUT_MS] takes over.
          */
         private const val STREAM_UPLOAD_CAP_MS = 120_000L
-
-        /**
-         * Factory for OAuth-bearer OpenAI-compatible providers that aren't
-         * Codex (e.g. xAI Grok). Same dynamic bearer plumbing, but the
-         * wire format stays Chat Completions and the endpoint is the
-         * caller-supplied base URL — not chatgpt.com's Responses API.
-         *
-         * Implemented as a factory (not a secondary ctor) because the
-         * JVM erases the signature down to
-         * `(Function1, LLMModel, String)` which collides with the Codex
-         * ctor's `(oauthTokenProvider, model, codexAccountId)` overload.
-         */
-        fun oauthOpenAICompat(
-            oauthTokenProvider: suspend () -> String,
-            model: LLMModel,
-            basePath: String,
-            /**
-             * [T-copilot-provider] Static headers added to every request.
-             * Copilot needs a fixed editor-identity set (Editor-Version,
-             * Copilot-Integration-Id, …) alongside the bearer; without them
-             * the API refuses the request. Defaulted empty so existing
-             * callers (xAI, Kimi) are unchanged.
-             */
-            extraHeaders: Map<String, String> = emptyMap(),
-        ): OpenAIProvider = OpenAIProvider(
-            apiKey = null,
-            oauthTokenProvider = oauthTokenProvider,
-            model = model,
-            basePath = basePath,
-            forceChatCompletions = true,
-            extraHeaders = extraHeaders,
-        )
     }
 
     private val isOAuth: Boolean get() = oauthTokenProvider != null

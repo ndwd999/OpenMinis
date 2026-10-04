@@ -155,13 +155,7 @@ class ClaudeSonnet55Test {
         assertEquals(listOf("low", "medium", "high", "xhigh", "max"), List(efforts.length()) { efforts.getString(it) })
     }
 
-    // ── Claude Code fingerprint ──────────────────────────────────────────
-
-    @Test
-    fun `the claude-cli fingerprint is at least upstream's 2_1_280`() {
-        val src = ProductionSources.read("auth/ClaudeCliMimicryHeaders.kt")
-        val v = Regex(""""User-Agent" to "claude-cli/(\d+)\.(\d+)\.(\d+)""").find(src)!!.groupValues.drop(1).map { it.toInt() }
-        val (a, b, c) = v
-        assertTrue("claude-cli/$a.$b.$c < 2.1.280", a > 2 || (a == 2 && (b > 1 || (b == 1 && c >= 280))))
-    }
+    // The Claude Code fingerprint assertion lived here and was removed with the
+    // OAuth path: the claude-cli/2.1.280 User-Agent it pinned existed only to
+    // satisfy Anthropic's subscription backend, which this build cannot reach.
 }

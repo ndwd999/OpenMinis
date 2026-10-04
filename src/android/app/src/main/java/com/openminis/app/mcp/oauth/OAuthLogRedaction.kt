@@ -1,4 +1,4 @@
-package com.openminis.app.auth
+package com.openminis.app.mcp.oauth
 
 /**
  * [T-android-oauth-log-redact] Log-safe renderings of OAuth secrets.

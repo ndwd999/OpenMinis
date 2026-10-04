@@ -1,4 +1,4 @@
-package com.openminis.app.auth
+package com.openminis.app.mcp.oauth
 
 import android.util.Log
 import java.io.BufferedReader
@@ -143,7 +143,7 @@ class OAuthCallbackServer(
         running = false
         try { serverSocket?.close() } catch (_: Exception) {}
         serverSocket = null
-        // Notify external callers (e.g. XAIOAuthManager) so they can
+        // Notify external callers so they can
         // cancel an in-flight suspendCancellableCoroutine instead of
         // hanging until the next inbound connection / the 5-min
         // OAuth wait timeout fires. Consume the callback (set to

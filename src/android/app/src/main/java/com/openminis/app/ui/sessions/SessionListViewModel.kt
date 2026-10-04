@@ -607,23 +607,8 @@ class SessionListViewModel(
             // [T-android-keyless-provider-selection] usableApiKey: a keyless
             // self-hosted provider is a valid candidate, and `loadApiKey`
             // silently skipped it here. See QuickTestSheet for the rationale.
-            // [T-android-copilot-not-connected] `?: continue` dropped any OAuth
-            // provider that keeps no API key — Copilot stores its credential
-            // under its own keys — so it was never a candidate here.
-            var apiKey = providerRepository.usableApiKey(instance)
+            val apiKey = providerRepository.usableApiKey(instance)
                 ?: if (providerRepository.hasAnyCredential(instance)) "" else continue
-            if (instance.credentialType == com.openminis.app.data.model.ProviderCredential.oauth) {
-                try {
-                    val manager = com.openminis.app.auth.OAuthManager.forInstance(context, instance)
-                    val freshToken = manager?.validAccessToken()
-                    if (freshToken != null && freshToken != apiKey) {
-                        providerRepository.saveApiKey(instance.id, freshToken)
-                        apiKey = freshToken
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "GroupSuggest OAuth refresh failed: ${e.message}")
-                }
-            }
             val provider = try {
                 ProviderFactory.create(instance, apiKey, entry.model, context, overrides = entry.overrides)
             } catch (e: Exception) {
@@ -893,8 +878,7 @@ class SessionListViewModel(
                     val response = provider.sendMessage(
                         messages = listOf(LLMMessage(role = LLMMessage.Role.USER, content = prompt)),
                         // [T-android-titlegen-systemprompt-unify] Shared with the
-                        // auto path; passed bare (the OAuth Claude Code prefix is
-                        // handled at the provider layer).
+                        // auto path; passed bare.
                         systemPrompt = com.openminis.app.ui.chat.TITLE_GEN_SYSTEM_PROMPT,
                         maxTokens = titleMaxTokens,
                         // [T-android-titlegen-temperature] null so the field is

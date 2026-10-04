@@ -230,8 +230,15 @@ fun ProviderConfigSnapshot.toProviderConfig(jsonForBlobs: Json): ProviderConfig 
         ProviderInstance(
             id = row.id,
             label = row.label,
-            providerType = ProviderType.valueOf(row.providerType),
-            credentialType = ProviderCredential.valueOf(row.credentialType),
+            // Tolerant decode, NOT valueOf. Both columns are free-form text in
+            // the DB: `providerType` can hold a name written by a newer build,
+            // and `credentialType` still holds "oauth" for every row written
+            // before this build went API-key-only. valueOf throws
+            // IllegalArgumentException on either, and this runs inside the
+            // snapshot -> ProviderConfig mapping for the WHOLE config, so one
+            // stale row would abort loading every provider the user has.
+            providerType = ProviderType.decoded(row.providerType),
+            credentialType = ProviderType.credentialDecoded(row.credentialType),
             isEnabled = row.isEnabled != 0,
             createdAt = row.createdAt,
             customBaseURL = row.customBaseURL,

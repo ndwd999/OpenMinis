@@ -38,7 +38,6 @@ class AnthropicProvider(
     override var model: LLMModel = LLMModel.claudeHaiku45,
     private val basePath: String = "https://api.anthropic.com",
     /** Whether this provider uses OAuth credentials (Bearer + beta header). */
-    val isOAuth: Boolean = false,
     /**
      * [T-provider-custom-user-agent] Per-provider User-Agent override.
      * null/blank → default UA; non-blank → replaces User-Agent on the chat
@@ -164,7 +163,7 @@ class AnthropicProvider(
                     )
                 )
             }
-            android.util.Log.e("AnthropicProvider", "Stream failed: ${response.code} isOAuth=$isOAuth body=${errorBody.take(300)}")
+            android.util.Log.e("AnthropicProvider", "Stream failed: ${response.code} body=${errorBody.take(300)}")
             throw mapHttpError(response.code, errorBody)
         }
 
@@ -326,45 +325,14 @@ class AnthropicProvider(
     }
 
     /**
-     * Build the `system` field as a JSON array of content blocks.
-     * Mirrors iOS AnthropicProvider.resolveSystemPrompt — two authentication paths:
+     * Build the `system` field as a single cached content block, or null when
+     * the prompt is null/empty (iOS parity — no empty `system` field).
      *
-     * - **OAuth (isOAuth=true)**: must start with the Claude Code prefix block (uncached)
-     *   so Anthropic's server-side OAuth check sees the exact expected prompt. Any user
-     *   tail is emitted as a second block with `cache_control: ephemeral` for cache hits.
-     *   If the caller already embedded the prefix, strip it before splitting; if not,
-     *   force-prepend the prefix so OAuth never fails the server-side gate.
-     *
-     * - **API key (isOAuth=false)**: single user-prompt block with `cache_control: ephemeral`.
-     *   Returns null when the prompt is null/empty (iOS parity — no empty `system` field).
+     * This used to branch on the credential: the Claude Code subscription path
+     * prefixed an OAuth identifier block (uncached) so Anthropic's server-side
+     * gate would pass. That path is gone with OAuth, so there is one shape now.
      */
     internal fun resolveSystemPrompt(userPrompt: String?): JSONArray? {
-        val claudeCodePrefix = com.openminis.app.auth.ClaudeOAuthManager.ANTHROPIC_OAUTH_IDENTIFIER_PROMPT
-        if (isOAuth) {
-            // Strip the prefix if the caller already prepended it; the tail is the real user prompt.
-            val tail = when {
-                userPrompt == null -> ""
-                userPrompt.startsWith(claudeCodePrefix) ->
-                    userPrompt.removePrefix(claudeCodePrefix).trimStart('\n')
-                else -> userPrompt
-            }
-            val arr = JSONArray()
-            // Block 1: Claude Code base prompt — NO cache_control (iOS parity).
-            arr.put(JSONObject().apply {
-                put("type", "text")
-                put("text", claudeCodePrefix)
-            })
-            // Block 2 (optional): user tail with ephemeral cache_control for max cache hits.
-            if (tail.isNotEmpty()) {
-                arr.put(JSONObject().apply {
-                    put("type", "text")
-                    put("text", tail)
-                    put("cache_control", ephemeralCacheControl())
-                })
-            }
-            return arr
-        }
-        // API key path: single cached block, or null when prompt is missing/empty.
         if (userPrompt.isNullOrEmpty()) return null
         return JSONArray().put(JSONObject().apply {
             put("type", "text")
@@ -1030,29 +998,13 @@ class AnthropicProvider(
         // by the request body; we must NOT include oauth-2025-04-20 or
         // claude-code-20250219 there because those signal Claude-Code-only
         // surface and get rejected on plain API-key auth.
+        //
+        // The Claude Code credential used to force a fixed beta set here
+        // (claude-code-*, oauth-*, prompt-caching-scope-*). Those flags signal
+        // subscription-only surface and Anthropic REJECTS them on plain API-key
+        // auth, so the API-key path only ever carries what the body needs.
         val betaFlags = mutableListOf<String>()
-        if (isOAuth) {
-            // [T-anthropic-redact-thinking] Deliberately OMIT
-            // "redact-thinking-2026-02-12" from the Claude Code OAuth betas.
-            // When present, Anthropic redacts the plaintext of `thinking` content
-            // blocks (returns an empty `thinking` string with only a `signature`),
-            // so a reasoning model runs (usage.thinking_tokens > 0) but the App
-            // can't show any thinking text. The official Claude Code CLI only adds
-            // this beta when `showThinkingSummaries` is unset/false (per
-            // anthropics/claude-code#31326 and the
-            // code.claude.com model-config docs); omitting it is equivalent to
-            // `showThinkingSummaries: true` — pure UI visibility, no effect on
-            // reasoning quality or token budget. All other OAuth betas stay.
-            betaFlags.addAll(listOf(
-                "claude-code-20250219",
-                "oauth-2025-04-20",
-                "interleaved-thinking-2025-05-14",
-                "prompt-caching-scope-2026-01-05",
-                "effort-2025-11-24",
-                "context-management-2025-06-27",
-                "extended-cache-ttl-2025-04-11",
-            ))
-        } else if (body.has("thinking")) {
+        if (body.has("thinking")) {
             val isAdaptive = body.optJSONObject("thinking")?.optString("type") == "adaptive"
             if (isAdaptive) {
                 betaFlags.add("effort-2025-11-24")
@@ -1060,55 +1012,15 @@ class AnthropicProvider(
                 betaFlags.add("interleaved-thinking-2025-05-14")
             }
         }
-        // [T-android-enhanced-cache] API-key path only carries the betas the
-        // body needs; the 1-hour cache TTL requires this flag. OAuth already
-        // lists it above, so guard on !isOAuth to avoid a duplicate token.
-        if (enhancedCache && !isOAuth) {
+        // [T-android-enhanced-cache] The 1-hour cache TTL requires this flag.
+        if (enhancedCache) {
             betaFlags.add("extended-cache-ttl-2025-04-11")
         }
         if (betaFlags.isNotEmpty()) {
             builder.header("anthropic-beta", betaFlags.joinToString(","))
         }
 
-        // Stainless / CLI fingerprint headers — only on OAuth; bump in lockstep
-        // with sub2api when the real CLI version moves.
-        //
-        // [T-anthropic-fable51-android] 2.1.195 -> 2.1.251. Anthropic gates
-        // models on this version: below 2.1.251 a claude-fable-5-1 request is
-        // refused with "Claude Code <ver> does not support this model; version
-        // 2.1.251 or newer is required." 2.1.251 is the value CLIProxyAPI
-        // adopted for exactly this reason (router-for-me/CLIProxyAPI#5405,
-        // bumping their defaultClaudeFingerprintUserAgent from 2.1.220), not a
-        // number picked to clear the error message.
-        //
-        // [T-anthropic-opus55-catalog] 2.1.251 -> 2.1.280, for the same class
-        // of gate one generation later: Claude Opus 5.5 is refused below
-        // 2.1.280, and the refusal is a plain 400 that reads like a bad model
-        // id rather than a version problem. The floor only ever rises, so
-        // every model that worked at 2.1.251 (Fable 5.1, Sonnet/Opus 4.x, …)
-        // is unaffected — the gate is "at least", not "exactly".
-        //
-        // The X-Stainless-* values below are deliberately NOT touched: they
-        // describe the SDK/runtime, not the CLI, and the backend pairs UA with
-        // them as one registered client identity. Changing them speculatively
-        // is how a working fingerprint gets broken.
-        if (isOAuth) {
-            builder.header("User-Agent", "claude-cli/2.1.280 (external, cli)")
-            builder.header("X-Stainless-Lang", "js")
-            builder.header("X-Stainless-Package-Version", "0.106.0")
-            builder.header("X-Stainless-OS", "Linux")
-            builder.header("X-Stainless-Arch", "arm64")
-            builder.header("X-Stainless-Runtime", "node")
-            builder.header("X-Stainless-Runtime-Version", "v24.18.0")
-            builder.header("X-Stainless-Retry-Count", "0")
-            builder.header("X-Stainless-Timeout", "600")
-            builder.header("X-App", "cli")
-            builder.header("Anthropic-Dangerous-Direct-Browser-Access", "true")
-        }
-
-        if (isOAuth) {
-            builder.header("Authorization", "Bearer $apiKey")
-        } else if (apiKey.isEmpty()) {
+        if (apiKey.isEmpty()) {
             // [T-empty-key-compat-endpoints] Keyless third-party
             // Anthropic-compatible endpoint: send NO auth header rather than
             // a malformed `Bearer ` / empty x-api-key that strict relays
@@ -1121,16 +1033,10 @@ class AnthropicProvider(
         }
 
         // [T-provider-custom-user-agent] Applied last so a non-blank override
-        // wins over the OAuth claude-cli UA above. null/blank → fall back to
-        // the branded Minis UA on the regular apiKey path, but on the OAuth
-        // path keep the claude-cli/2.1.280 fingerprint set above (the
-        // Anthropic OAuth backend pairs UA + X-Stainless-* and rejects calls
-        // whose UA doesn't match the registered client identity). T-android-
-        // default-ua: pass defaultUserAgent=null on OAuth, branded default
-        // everywhere else.
+        // wins over the branded default. null/blank falls back to the Minis UA.
         builder.applyUserAgentOverride(
             customUserAgent,
-            defaultUserAgent = if (isOAuth) null else com.openminis.app.provider.MinisUserAgent.DEFAULT,
+            defaultUserAgent = com.openminis.app.provider.MinisUserAgent.DEFAULT,
         )
         return builder.build()
     }

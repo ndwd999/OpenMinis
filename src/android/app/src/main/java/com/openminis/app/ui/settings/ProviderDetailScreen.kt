@@ -1,8 +1,6 @@
 package com.openminis.app.ui.settings
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,11 +13,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.IosShare
@@ -43,7 +38,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -55,9 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -74,7 +66,6 @@ import com.openminis.app.ui.components.MinisOutlinedButton
 import com.openminis.app.ui.components.MinisSmallButton
 import com.openminis.app.ui.components.MinisSmallOutlinedButton
 import com.openminis.app.ui.components.MinisSmallTextButton
-import com.openminis.app.ui.components.MinisTextButton
 import com.openminis.app.ui.components.SectionTextField
 
 private const val TAG = "ProviderDetail"
@@ -119,38 +110,8 @@ fun ProviderDetailScreen(
     // flushed and show the OLD key, making Save look like a no-op. Keeping it in
     // remember + updating it synchronously in onSave reflects the just-saved
     // value immediately, independent of the async flush.
-    // [T-android-copilot-not-connected] An OAuth credential does not have to
-    // live in the API-key store, so `loadApiKey` alone cannot answer for it.
-    //
-    // Every other OAuth provider here mirrors its token into that store on
-    // login (Kimi, Claude, OpenAI, xAI, OpenRouter all call `saveApiKey`), which
-    // is why reading it works for them. Copilot deliberately does not: its
-    // credential is the two-tier GitHub/session pair under its own keys, and the
-    // API-key path is excluded for it on purpose (T-android-copilot-oauth-only).
-    // The result was a sign-in that fully succeeded — device flow complete,
-    // session token minted, 28 models loaded — and a detail screen that still
-    // said "Not connected", because it was asking the one store the credential
-    // is never written to.
-    //
-    // Asked of the OAuth manager instead, which is what iOS does
-    // (`CopilotOAuthManager.shared.isAuthenticated(instanceId:)` in
-    // ProviderInstancesView). The placeholder below only has to be non-empty —
-    // it drives the connected dot and the Sign In/Sign Out branch; the masked
-    // display is meaningless for a credential the user never types, and showing
-    // a masked GitHub token here would leak it into a screenshot for no reason.
-    val detailContext = androidx.compose.ui.platform.LocalContext.current
-    // Ask the same question the provider LIST already asks
-    // (`OAuthManager.isAuthenticated()`), so the two screens cannot disagree —
-    // and so a provider storing its credential elsewhere is handled by its own
-    // manager rather than by a special case here.
-    val oauthConnected = instance.credentialType == com.openminis.app.data.model.ProviderCredential.oauth &&
-        com.openminis.app.auth.OAuthManager.forInstance(detailContext, instance)
-            ?.isAuthenticated() == true
     var storedKey by remember(instanceId) {
-        mutableStateOf(
-            providerRepository.loadApiKey(instanceId)
-                ?: if (oauthConnected) OAUTH_CONNECTED_PLACEHOLDER else "",
-        )
+        mutableStateOf(providerRepository.loadApiKey(instanceId) ?: "")
     }
     var isEditingKey by remember { mutableStateOf(false) }
     var editKeyValue by remember { mutableStateOf("") }
@@ -165,11 +126,6 @@ fun ProviderDetailScreen(
 
     val entries = providerRepository.entriesFor(instanceId)
     var isRefreshing by remember { mutableStateOf(false) }
-    // [T-codex-dynamic-discovery GH#319] Set when the Codex discovery endpoint
-    // rejects the stored credential. Shown as a dialog rather than silently
-    // leaving the old list on screen, which would read as a successful refresh
-    // while the account is signed out.
-    var refreshAuthError by remember { mutableStateOf(false) }
 
     val exportContext = androidx.compose.ui.platform.LocalContext.current
 
@@ -210,75 +166,36 @@ fun ProviderDetailScreen(
         }
 
         // ─── Credential / API Key ───────────────────────────────────
-        val isOAuthProvider =
-            instance.credentialType == com.openminis.app.data.model.ProviderCredential.oauth
-        SettingsSection(
-            header = if (isOAuthProvider) stringResource(R.string.add_provider_credential) else stringResource(R.string.provider_list_api_key),
-            footer = if (isOAuthProvider) {
-                "OAuth tokens are stored securely in encrypted storage."
-            } else {
-                null
-            },
-        ) {
+        SettingsSection(header = stringResource(R.string.provider_list_api_key)) {
             SettingsCardBlock {
-                if (isOAuthProvider) {
-                    OAuthCredentialBlock(
-                        instance = instance,
-                        storedKey = storedKey,
-                        providerRepository = providerRepository,
-                    )
-                } else {
-                    ApiKeyCredentialBlock(
-                        storedKey = storedKey,
-                        keyVisible = keyVisible,
-                        onToggleVisibility = { keyVisible = !keyVisible },
-                        isEditing = isEditingKey,
-                        editValue = editKeyValue,
-                        onEditValueChange = { editKeyValue = it },
-                        onBeginEdit = {
-                            isEditingKey = true
-                            editKeyValue = storedKey
-                        },
-                        onCancelEdit = {
-                            isEditingKey = false
-                            editKeyValue = ""
-                            keyVisible = false
-                        },
-                        onSave = {
-                            providerRepository.saveApiKey(instanceId, editKeyValue)
-                            // [T-android-provider-apikey-save-stale] Reflect the
-                            // just-saved value in UI state immediately rather than
-                            // re-reading the async-written prefs on recomposition.
-                            storedKey = editKeyValue
-                            AppLogger.info(TAG, "Saved API key for ${instance.id}")
-                            isEditingKey = false
-                            editKeyValue = ""
-                            keyVisible = false
-                        },
-                    )
-                }
-            }
-        }
-
-        // Manual Bearer Token (OAuth providers only — proxy override)
-        //
-        // [T-android-copilot-oauth-only] …except Copilot, whose factory branch
-        // never looks this token up: it wires `oauthTokenProvider` straight to
-        // the session-token minter. A token pasted here was stored, shown as
-        // configured, and then ignored on every request — a dead end that looks
-        // like a feature. Mirrors iOS ProviderInstanceDetailView.
-        if (isOAuthProvider && instance.providerType != ProviderType.githubCopilot) {
-            SettingsSection(
-                header = stringResource(R.string.provider_detail_manual_bearer_token),
-                footer = stringResource(R.string.provider_detail_use_a_static_bearer_token_instead_of_the) +
-                    "Useful with custom proxy endpoints.",
-            ) {
-                SettingsCardBlock {
-                    ManualBearerTokenSection(
-                        instance = instance,
-                        context = androidx.compose.ui.platform.LocalContext.current,
-                    )
-                }
+                ApiKeyCredentialBlock(
+                    storedKey = storedKey,
+                    keyVisible = keyVisible,
+                    onToggleVisibility = { keyVisible = !keyVisible },
+                    isEditing = isEditingKey,
+                    editValue = editKeyValue,
+                    onEditValueChange = { editKeyValue = it },
+                    onBeginEdit = {
+                        isEditingKey = true
+                        editKeyValue = storedKey
+                    },
+                    onCancelEdit = {
+                        isEditingKey = false
+                        editKeyValue = ""
+                        keyVisible = false
+                    },
+                    onSave = {
+                        providerRepository.saveApiKey(instanceId, editKeyValue)
+                        // [T-android-provider-apikey-save-stale] Reflect the
+                        // just-saved value in UI state immediately rather than
+                        // re-reading the async-written prefs on recomposition.
+                        storedKey = editKeyValue
+                        AppLogger.info(TAG, "Saved API key for ${instance.id}")
+                        isEditingKey = false
+                        editKeyValue = ""
+                        keyVisible = false
+                    },
+                )
             }
         }
 
@@ -389,10 +306,8 @@ fun ProviderDetailScreen(
             }
         }
 
-        // ─── API Format (OpenAI API-key only) ───────────────────────
-        if (instance.providerType == ProviderType.openAI &&
-            instance.credentialType != com.openminis.app.data.model.ProviderCredential.oauth
-        ) {
+        // ─── API Format (OpenAI only) ───────────────────────────────
+        if (instance.providerType == ProviderType.openAI) {
             SettingsSection(
                 header = stringResource(R.string.provider_detail_api_format),
                 footer = if (instance.useResponsesAPI) {
@@ -580,18 +495,19 @@ fun ProviderDetailScreen(
                 } else {
                     {
                         isRefreshing = true
-                        refreshAuthError = false
                         scope.launch {
                             try {
-                                // [T-codex-dynamic-discovery GH#319]
                                 // forceRefresh: this is the manual Refresh tap,
                                 // which must bypass the discovery cache — a
                                 // Refresh that returns a cached list is not one.
                                 providerRepository.refreshModels(instance, forceRefresh = true)
                                 AppLogger.info(TAG, "Refreshed models for ${instance.id}")
-                            } catch (e: com.openminis.app.data.repository.CodexDiscoveryAuthException) {
-                                AppLogger.warning(TAG, "Refresh rejected credential: ${e.message}")
-                                refreshAuthError = true
+                            } catch (e: Exception) {
+                                // A rejected credential must not read as a
+                                // successful refresh over a stale list, so it is
+                                // logged rather than swallowed. The model list
+                                // itself is left as-is.
+                                AppLogger.warning(TAG, "Refresh failed for ${instance.id}: ${e.message}")
                             } finally {
                                 isRefreshing = false
                             }
@@ -791,25 +707,6 @@ fun ProviderDetailScreen(
         Spacer(modifier = Modifier.height(32.dp))
     }
 
-    // [T-codex-dynamic-discovery GH#319] An expired / revoked Codex credential
-    // must be named as such. Without this the refresh would quietly fall back
-    // to the built-in list and look like it worked.
-    if (refreshAuthError) {
-        MinisAlertDialog(
-            onDismissRequest = { refreshAuthError = false },
-            title = stringResource(R.string.provider_refresh_auth_failed_title),
-            text = stringResource(R.string.provider_refresh_auth_failed_body),
-            // Both buttons dismiss: this is an acknowledgement, not a choice.
-            // MinisAlertDialog always renders two, and rather than invent a
-            // second action that would only pretend to do something, the real
-            // next step ("sign in again") is stated in the body — the sign-in
-            // control is the Credential row on this same screen.
-            confirmText = stringResource(R.string.ok),
-            dismissText = stringResource(R.string.common_close),
-            onConfirm = { refreshAuthError = false },
-        )
-    }
-
     if (showDeleteDialog) {
         MinisAlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -847,261 +744,6 @@ fun ProviderDetailScreen(
 }
 
 // ─── Credential blocks ─────────────────────────────────────────────────────────
-
-/**
- * [T-android-copilot-not-connected] Stands in for a credential that exists but
- * has no displayable form — Copilot's GitHub token, which the user never types
- * and which should not be rendered even masked. Only its non-emptiness is read.
- */
-private const val OAUTH_CONNECTED_PLACEHOLDER = "oauth"
-
-@Composable
-private fun OAuthCredentialBlock(
-    instance: com.openminis.app.data.model.ProviderInstance,
-    storedKey: String,
-    providerRepository: ProviderRepository,
-) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    // [T-android-openai-oauth-signout-signin-stuck] Drive the Sign In / Sign Out
-    // toggle off LOCAL Compose state instead of the `storedKey` parameter, which
-    // is read once per parent composition (a plain val) and never updates after
-    // a sign-out/sign-in. Without this the screen kept showing "Sign Out" after a
-    // logout (UI never refreshed) AND the Sign In branch was never reached
-    // because its gate was the same stale `storedKey.isNotEmpty()` — so a failed
-    // sign-out left Sign In dead too. `displayedKey` mirrors the live credential
-    // so the masked token / connected dot refresh together. Mirrors iOS
-    // ProviderInstanceDetailView's `oauthRefreshTrigger.toggle()`.
-    var displayedKey by remember(instance.id) { mutableStateOf(storedKey) }
-    var isAuthenticating by remember(instance.id) { mutableStateOf(false) }
-    // [T-android-oauth-foreground-exchange] Sign-in progress and failure, made
-    // visible. Before, a pending sign-in looked identical to signed-out, and a
-    // failure was only written to the log — after authorizing Anthropic in the
-    // browser the user came back to an unchanged screen and no explanation.
-    var authError by remember(instance.id) { mutableStateOf<String?>(null) }
-    val oauthPhase by com.openminis.app.auth.OAuthForegroundGate.phase.collectAsState()
-    // [T-kimi-oauth] Device-code dialog state for Kimi re-auth (see
-    // AddProviderScreen.OAuthConfigSection for the rationale).
-    var kimiDeviceAuth by remember(instance.id) {
-        mutableStateOf<com.openminis.app.auth.KimiDeviceFlow.DeviceAuthorization?>(null)
-    }
-    var kimiLoginJob by remember(instance.id) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    kimiDeviceAuth?.let { auth ->
-        KimiDeviceLoginDialog(
-            userCode = auth.userCode,
-            verificationUrl = auth.openUrl,
-            onCancel = {
-                kimiLoginJob?.cancel()
-                kimiDeviceAuth = null
-            },
-        )
-    }
-
-    // [T-oauth-keep-credentials] Refresh rejected: the credential is kept (never
-    // auto-deleted) but unusable until the user signs in again.
-    var needsReauth by remember(instance.id) {
-        mutableStateOf(com.openminis.app.auth.OAuthManager.needsReauth(context, instance.id))
-    }
-
-    // Shared by the Sign In button and, for a rejected refresh, Sign In Again.
-    fun startSignIn() {
-        if (isAuthenticating) return
-        isAuthenticating = true
-        authError = null
-        com.openminis.app.auth.OAuthForegroundGate.begin()
-        kimiLoginJob = scope.launch {
-            try {
-                val token = when (instance.providerType) {
-                    ProviderType.kimiCode ->
-                        com.openminis.app.auth.KimiOAuthManager.login(
-                            context, instance.id, providerRepository,
-                            onDeviceCode = { auth -> kimiDeviceAuth = auth },
-                        ).also { kimiDeviceAuth = null }
-                    ProviderType.anthropic ->
-                        com.openminis.app.auth.ClaudeOAuthManager.login(
-                            context, instance.id, providerRepository,
-                        )
-                    ProviderType.openAI ->
-                        com.openminis.app.auth.OpenAIOAuthManager.login(
-                            context, instance.id, providerRepository,
-                        )
-                    ProviderType.openRouter ->
-                        com.openminis.app.auth.OpenRouterOAuthManager.login(
-                            context, instance.id, providerRepository,
-                        )
-                    ProviderType.xAI ->
-                        com.openminis.app.auth.XAIOAuthManager.login(
-                            context, instance.id, providerRepository,
-                        )
-                    else -> null
-                }
-                // login() persists the token via providerRepository.saveApiKey;
-                // reflect it locally so the UI flips to the connected state
-                // without needing the parent to recompose.
-                if (token != null) {
-                    displayedKey = providerRepository.loadApiKey(instance.id) ?: token
-                    needsReauth = false
-                    AppLogger.info(TAG, "OAuth signed in for ${instance.id}")
-                    // [T-provider-refresh-outlives-screen] (GH#265) A fresh
-                    // sign-in (including Sign In Again after a rejected refresh)
-                    // is when the account's real catalog becomes reachable —
-                    // reconcile it now instead of waiting for a manual Refresh.
-                    // Forced, so a cached discovery result cannot stand in for
-                    // the new account's list. Repository scope: the user may
-                    // leave this screen straight after signing in.
-                    providerRepository.triggerAsyncModelReconcile(instance.id, forceRefresh = true)
-                }
-            } catch (e: Exception) {
-                // A cancelled sign-in (user backed out, screen left) is not
-                // an error to show.
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                AppLogger.warning(TAG, "OAuth sign-in failed for ${instance.id}: ${e.message}")
-                authError = if (e is com.openminis.app.auth.OAuthNetworkUnreachableException) {
-                    context.getString(R.string.add_provider_oauth_network_unreachable)
-                } else {
-                    context.getString(
-                        R.string.oauth_sign_in_failed,
-                        e.message ?: e.javaClass.simpleName,
-                    )
-                }
-            } finally {
-                isAuthenticating = false
-                kimiDeviceAuth = null
-                com.openminis.app.auth.OAuthForegroundGate.end()
-            }
-        }
-    }
-
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            "OAuth",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        if (displayedKey.isNotEmpty()) {
-            Text(
-                maskedKey(displayedKey),
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .size(8.dp)
-                    .background(
-                        if (needsReauth) MaterialTheme.colorScheme.error else Color(0xFF34C759),
-                        CircleShape,
-                    ),
-            )
-        } else {
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                if (isAuthenticating) stringResource(R.string.oauth_status_signing_in) else "Not connected",
-                color = if (isAuthenticating) MaterialTheme.colorScheme.onSurfaceVariant
-                else MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
-    Spacer(modifier = Modifier.height(8.dp))
-    if (displayedKey.isNotEmpty() && needsReauth) {
-        Text(
-            stringResource(R.string.provider_oauth_sign_in_expired_detail),
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        MinisSmallButton(
-            enabled = !isAuthenticating,
-            onClick = { startSignIn() },
-        ) {
-            Text(stringResource(R.string.provider_oauth_sign_in_again))
-        }
-        OAuthProgressLine(isAuthenticating = isAuthenticating, phase = oauthPhase, error = authError)
-        Spacer(modifier = Modifier.height(8.dp))
-    }
-    if (displayedKey.isNotEmpty()) {
-        MinisSmallButton(
-            onClick = {
-                // [T-android-openai-oauth-signout-signin-stuck] A real sign-out
-                // must clear BOTH credential stores: (1) the persisted OAuth
-                // token blob (access + refresh_token + expire_at, plus any manual
-                // bearer / account_id) via OAuthManager.logout(), and (2) the
-                // apiKey mirror that ProviderFactory.loadApiKey() reads. Before
-                // this fix only deleteApiKey() ran, so the refresh_token survived
-                // and validAccessToken() silently re-minted an access token —
-                // the user stayed effectively logged in. Then flip local state so
-                // the UI swaps to the Sign In button immediately.
-                com.openminis.app.auth.OAuthManager.forInstance(context, instance)?.logout()
-                providerRepository.deleteApiKey(instance.id)
-                displayedKey = ""
-                needsReauth = false
-                AppLogger.info(TAG, "OAuth signed out for ${instance.id} (tokens + apiKey cleared)")
-            },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.error,
-            ),
-        ) {
-            Text(stringResource(R.string.provider_detail_sign_out))
-        }
-    } else {
-        MinisSmallButton(
-            // Disabled while a sign-in runs, rather than silently ignoring taps.
-            enabled = !isAuthenticating,
-            onClick = { startSignIn() },
-        ) {
-            Text(stringResource(R.string.provider_detail_sign_in))
-        }
-        OAuthProgressLine(isAuthenticating = isAuthenticating, phase = oauthPhase, error = authError)
-    }
-}
-
-/**
- * [T-android-oauth-foreground-exchange] What a sign-in is doing right now, or
- * why it failed. The waiting line is the point: without it, coming back from
- * the browser looked exactly like never having started.
- */
-@Composable
-private fun OAuthProgressLine(
-    isAuthenticating: Boolean,
-    phase: com.openminis.app.auth.OAuthForegroundGate.Phase?,
-    error: String?,
-) {
-    if (isAuthenticating) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(top = 8.dp),
-        ) {
-            androidx.compose.material3.CircularProgressIndicator(
-                modifier = Modifier.size(14.dp),
-                strokeWidth = 2.dp,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                stringResource(
-                    if (phase == com.openminis.app.auth.OAuthForegroundGate.Phase.COMPLETING) {
-                        R.string.oauth_completing_sign_in
-                    } else {
-                        R.string.oauth_waiting_for_authorization
-                    },
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    } else if (error != null) {
-        Text(
-            error,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-    }
-}
 
 @Composable
 private fun ApiKeyCredentialBlock(
@@ -1216,116 +858,6 @@ private fun exportProviderInstance(
         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(chooser)
-}
-
-/**
- * Manual Bearer Token section for OAuth providers. Mirrors iOS
- * `manualOAuthTokenSection` — when set, the static token bypasses the OAuth
- * refresh flow entirely and is sent verbatim as `Authorization: Bearer …`.
- */
-@Composable
-private fun ManualBearerTokenSection(
-    instance: com.openminis.app.data.model.ProviderInstance,
-    context: android.content.Context,
-) {
-    val manager = remember(instance.id) {
-        com.openminis.app.auth.OAuthManager.forInstance(context, instance)
-    }
-    var reloadTick by remember(instance.id) { mutableStateOf(0) }
-    val stored = remember(instance.id, reloadTick) { manager?.loadManualBearerToken() }
-    val hasToken = !stored.isNullOrEmpty()
-
-    var isEditing by remember(instance.id) { mutableStateOf(false) }
-    var draft by remember(instance.id) { mutableStateOf("") }
-
-    if (isEditing) {
-        SectionTextField(
-            value = draft,
-            onValueChange = { draft = it },
-            singleLine = false,
-            placeholder = stringResource(R.string.provider_detail_paste_bearer_token),
-            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-            fieldModifier = Modifier.bringIntoViewOnFocus(),
-        )
-        Row(modifier = Modifier.padding(top = 8.dp)) {
-            // [T-android-settings-ui-md3] #4 + #12 neutral outlined Cancel (see
-            // the API-key edit pair above) paired with the filled Save.
-            MinisSmallOutlinedButton(
-                onClick = {
-                    isEditing = false
-                    draft = ""
-                },
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            ) {
-                Text(stringResource(R.string.common_cancel))
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            MinisSmallButton(
-                onClick = {
-                    val cleaned = draft.replace(Regex("\\s+"), "")
-                    if (cleaned.isNotEmpty() && manager != null) {
-                        manager.saveManualBearerToken(cleaned)
-                        AppLogger.info(TAG, "Manual bearer token set for ${instance.id}")
-                        draft = ""
-                        isEditing = false
-                        reloadTick++
-                    }
-                },
-                enabled = draft.isNotBlank(),
-            ) {
-                Text(stringResource(R.string.provider_detail_save_token))
-            }
-        }
-        return
-    }
-
-    if (hasToken) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Configured",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-            )
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .size(8.dp)
-                    .background(Color(0xFF34C759), CircleShape),
-            )
-        }
-        Row(modifier = Modifier.padding(top = 8.dp)) {
-            MinisSmallOutlinedButton(onClick = {
-                draft = ""
-                isEditing = true
-            }) {
-                Text(stringResource(R.string.common_change))
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            MinisSmallOutlinedButton(
-                onClick = {
-                    manager?.deleteManualBearerToken()
-                    AppLogger.info(TAG, "Manual bearer token removed for ${instance.id}")
-                    reloadTick++
-                },
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
-            ) {
-                Text(stringResource(R.string.common_remove))
-            }
-        }
-    } else {
-        MinisSmallOutlinedButton(onClick = {
-            draft = ""
-            isEditing = true
-        }) {
-            Text(stringResource(R.string.provider_detail_set_manual_bearer_token))
-        }
-    }
 }
 
 /** Input modalities that get a (muted) capability badge in the model list. */
