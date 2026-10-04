@@ -277,3 +277,4 @@ object SubAgentRoster {
         return roster.firstOrNull { nameKey(it.name) == raw }
     }
 
+}

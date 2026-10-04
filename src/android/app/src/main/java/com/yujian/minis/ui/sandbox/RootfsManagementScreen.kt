@@ -295,17 +295,13 @@ fun RootfsManagementScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "The rootfs contains the Alpine Linux filesystem used by " +
-                            "the sandbox. Resetting will delete all data and restore to " +
-                            "factory state.",
+                        text = stringResource(R.string.rootfs_about_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Reset: Delete everything\n" +
-                            "Backup: Save /root directory\n" +
-                            "Restore: Recover saved data",
+                        text = stringResource(R.string.rootfs_about_legend),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -327,7 +323,7 @@ fun RootfsManagementScreen(
                     showResetDialog = false
                     viewModel.resetRootfs(context, keepUserData = false)
                 }) {
-                    Text("Reset", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.common_reset), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {

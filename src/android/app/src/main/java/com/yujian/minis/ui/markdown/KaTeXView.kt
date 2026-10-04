@@ -28,11 +28,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.yujian.minis.R
 import com.yujian.minis.logging.AppLogger
 import com.yujian.minis.ui.theme.ChatColors
 import kotlinx.coroutines.Dispatchers
@@ -174,7 +176,7 @@ fun KaTeXRenderView(
         // and the formula renders ~density× too large).
         Image(
             bitmap = cached.bitmap.asImageBitmap(),
-            contentDescription = "Math: $latex",
+            contentDescription = stringResource(R.string.a11y_math_expression, latex),
             modifier = modifier.size(cached.cssWidth.dp, cached.cssHeight.dp),
         )
         return
@@ -191,7 +193,7 @@ fun KaTeXRenderView(
     if (renderedBitmap != null) {
         Image(
             bitmap = renderedBitmap!!.asImageBitmap(),
-            contentDescription = "Math: $latex",
+            contentDescription = stringResource(R.string.a11y_math_expression, latex),
             modifier = modifier.size(renderedCssWidth.dp, renderedCssHeight.dp),
         )
     } else if (renderError != null) {

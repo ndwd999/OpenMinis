@@ -90,6 +90,7 @@ import com.yujian.minis.agent.jobs.HelperRunner
 import com.yujian.minis.debug.HeadlessChatRunner
 import com.yujian.minis.ui.theme.ChatColors
 import com.yujian.minis.ui.DisplayBitmapLimits
+import com.yujian.minis.ui.theme.IosAccents
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 import com.yujian.minis.ui.components.DecorativeSpinner
@@ -117,9 +118,9 @@ internal fun helperAccent(): Color = if (ChatColors.isDark) HelperAccentDark els
 /** Static mid-tone for non-composable call sites (tool colour map). */
 val HelperAccentStatic = Color(0xFF8B6CF6)
 
-internal val HelperStatusGreen = Color(0xFF34C759)
-internal val HelperStatusYellow = Color(0xFFFFCC00)
-internal val HelperStatusRed = Color(0xFFFF3B30)
+internal val HelperStatusGreen = IosAccents.Green
+internal val HelperStatusYellow = IosAccents.Yellow
+internal val HelperStatusRed = IosAccents.Red
 
 /** What an agent block's content currently says, in structured form. */
 internal sealed class HelperPhase {
@@ -735,7 +736,7 @@ private fun HelperSecondLine(info: HelperBlockInfo) {
                 Icon(
                     Icons.Default.Warning,
                     contentDescription = stringResource(R.string.agent_pinned_group_unavailable),
-                    tint = Color(0xFFFFCC00),
+                    tint = IosAccents.Yellow,
                     modifier = Modifier.size(11.dp),
                 )
             }
@@ -747,7 +748,7 @@ private fun HelperSecondLine(info: HelperBlockInfo) {
                 )
             }
             p.elapsedSeconds?.let { Text(helperElapsedLabel(it), fontSize = 11.sp, lineHeight = 12.sp, fontFamily = FontFamily.Monospace, color = ChatColors.tertiaryText, maxLines = 1) }
-            if (p.escalation) Icon(Icons.Default.PriorityHigh, contentDescription = null, tint = Color(0xFFFF9500), modifier = Modifier.size(11.dp))
+            if (p.escalation) Icon(Icons.Default.PriorityHigh, contentDescription = null, tint = IosAccents.Orange, modifier = Modifier.size(11.dp))
         }
     }
 }
@@ -822,7 +823,7 @@ internal fun HelperThumbContent(block: AssistantBlock) {
                     if (p.modelGroupUnavailable) {
                         Icon(
                             Icons.Default.Warning, contentDescription = null,
-                            tint = Color(0xFFFFCC00).copy(alpha = 0.9f),
+                            tint = IosAccents.Yellow.copy(alpha = 0.9f),
                             modifier = Modifier.size(6.dp),
                         )
                     }
@@ -849,10 +850,9 @@ internal fun AgentDetailCard(
     trailing: (@Composable () -> Unit)? = null,
     body: (@Composable () -> Unit)? = null,
 ) {
-    val isDark = ChatColors.isDark
-    val barBg = if (isDark) Color(0xFF212121) else Color(0xFFEBEBEB)
-    val cardBg = if (isDark) Color(0xFF1A1A1A) else Color(0xFFF0F0F0)
-    val stroke = if (isDark) Color(0xFF404040) else Color(0xFFD1D1D1)
+    val barBg = ChatColors.toolCardHeaderBg
+    val cardBg = ChatColors.toolCardBg
+    val stroke = ChatColors.toolCardBorder
     val shape = RoundedCornerShape(10.dp)
     Column(modifier = Modifier.fillMaxWidth().clip(shape).background(cardBg).border(0.5.dp, stroke, shape)) {
         Row(modifier = Modifier.fillMaxWidth().background(barBg).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1206,7 +1206,7 @@ internal fun AgentCallbackCard(callback: AgentCallback, onTap: () -> Unit, modif
     val accent = when (callback.status) {
         "running" -> helperAccent
         "done" -> HelperStatusGreen
-        "cancelled", "timeout" -> Color(0xFFFFCC00)
+        "cancelled", "timeout" -> IosAccents.Yellow
         else -> HelperStatusRed
     }
     val icon = when {

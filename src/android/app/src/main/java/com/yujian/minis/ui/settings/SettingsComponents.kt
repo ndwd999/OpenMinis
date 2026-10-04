@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,12 +43,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.yujian.minis.R
 import com.yujian.minis.i18n.uppercaseForDisplay
+import com.yujian.minis.ui.theme.Spacing
+import com.yujian.minis.ui.theme.Radius
 
 /**
  * Shared primitives for settings pages. Grouped-card layout (iOS inset-grouped style).
@@ -100,7 +105,7 @@ fun SettingsScaffold(
                 when {
                     navigation != null -> navigation()
                     onBack != null -> IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             }
@@ -203,14 +208,70 @@ fun SettingsSwitch(
 // ─── Section ───────────────────────────────────────────────────────────────────
 
 /**
+ * The visual spec of a [SettingsSection]: every number that differs between the
+ * settings screens that used to carry their own private copy of the section
+ * layout. Grouping them here keeps [SettingsSection] a single implementation
+ * while making each screen's geometry explicit and reviewable.
+ *
+ * @param topPadding gap above the whole section (also spaces it from the app bar).
+ * @param cardCornerRadius corner radius of the rounded card behind [SettingsSection]'s rows.
+ * @param cardHorizontalPadding horizontal inset of the card from the screen edge.
+ * @param headerPadding padding around the uppercase header caption.
+ * @param footerPadding padding around the optional footer caption.
+ */
+data class SettingsSectionSpec(
+    val topPadding: Dp,
+    val cardCornerRadius: Dp,
+    val cardHorizontalPadding: Dp,
+    val headerPadding: PaddingValues,
+    val footerPadding: PaddingValues,
+)
+
+/**
+ * The spec shared by every settings screen built on the standard
+ * `SettingsRow` primitives: 24dp above the section, a 14dp card inset 16dp from
+ * the edges, and captions aligned to the 32dp text column.
+ */
+val StandardSettingsSectionSpec = SettingsSectionSpec(
+    topPadding = 24.dp,
+    cardCornerRadius = Radius.ExtraLarge,
+    cardHorizontalPadding = Spacing.Huge,
+    headerPadding = PaddingValues(start = 32.dp, end = 32.dp, bottom = Spacing.Small),
+    footerPadding = PaddingValues(
+        start = 32.dp,
+        end = 32.dp,
+        top = Spacing.Small,
+        bottom = Spacing.Tiny,
+    ),
+)
+
+/**
+ * The spec used by the top-level Settings screen, whose rows are hand-rolled
+ * (`SettingsItem`, not `SettingsRow`) and so sit on a tighter 20dp / 12dp /
+ * 20dp rhythm with captions inset to the 20dp / 16dp text column.
+ */
+val CompactSettingsSectionSpec = SettingsSectionSpec(
+    topPadding = Spacing.Giant,
+    cardCornerRadius = Radius.Large,
+    cardHorizontalPadding = Spacing.Huge,
+    headerPadding = PaddingValues(horizontal = Spacing.Huge, vertical = Spacing.ExtraSmall),
+    footerPadding = PaddingValues(horizontal = Spacing.Giant, vertical = Spacing.ExtraSmall),
+)
+
+/**
  * A grouped section — optional small-caps header + rounded card + optional footer caption.
  * Children (SettingsRow / SettingsSwitchRow / …) appear inside the card; dividers auto-inset.
+ *
+ * [spec] carries the per-screen geometry; it defaults to [StandardSettingsSectionSpec],
+ * which is what every screen using the shared row primitives wants. Pass
+ * [CompactSettingsSectionSpec] only where the rows are not `SettingsRow`s.
  */
 @Composable
 fun SettingsSection(
     header: String? = null,
     footer: String? = null,
     modifier: Modifier = Modifier,
+    spec: SettingsSectionSpec = StandardSettingsSectionSpec,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // [T-android-settings-ui-md3] Section vertical rhythm normalized to the 4dp
@@ -220,7 +281,7 @@ fun SettingsSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 24.dp),
+            .padding(top = spec.topPadding),
     ) {
         if (header != null) {
             Text(
@@ -232,7 +293,7 @@ fun SettingsSection(
                 // [T-android-settings-ui-md3] #5 header→card gap = 8dp (was 6dp,
                 // off-grid). Horizontal stays 32dp to align the header text with
                 // the inset card's content.
-                modifier = Modifier.padding(start = 32.dp, end = 32.dp, bottom = 8.dp),
+                modifier = Modifier.padding(spec.headerPadding),
             )
         }
         // [T-android-settings-section-symmetry] The card carries NO vertical
@@ -249,8 +310,8 @@ fun SettingsSection(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .padding(horizontal = spec.cardHorizontalPadding)
+                .clip(RoundedCornerShape(spec.cardCornerRadius))
                 .background(MaterialTheme.colorScheme.surfaceContainerLow),
             content = content,
         )
@@ -263,7 +324,7 @@ fun SettingsSection(
                 // card, 4dp before the next section (the parent's 24dp top padding
                 // already provides separation, so keep the footer's own bottom
                 // tight at 4dp).
-                modifier = Modifier.padding(start = 32.dp, end = 32.dp, top = 8.dp, bottom = 4.dp),
+                modifier = Modifier.padding(spec.footerPadding),
                 lineHeight = 16.sp,
             )
         }
@@ -271,6 +332,29 @@ fun SettingsSection(
 }
 
 // ─── Row primitives ────────────────────────────────────────────────────────────
+
+/**
+ * Hairline separator between two rows inside a [SettingsSection] card.
+ *
+ * Rows carry their own leading icon (or none), so the line has to start past
+ * it — pass [startInset] as 58dp when the row above has an icon and 14dp when
+ * it does not. The trailing inset is fixed at 14dp.
+ *
+ * Distinct from `ui.components.SettingsRowDivider` (16dp symmetric inset, a
+ * different colour) and from `ui.components.SectionDivider` (a full-bleed
+ * section rule). Deliberately not merged with either: all three draw different
+ * lines.
+ */
+@Composable
+fun SettingsCardRowDivider(startInset: Dp) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = startInset, end = Spacing.ExtraLarge)
+            .height(0.5.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+    )
+}
 
 /**
  * Generic row: left icon (optional colored circle) + title/subtitle + trailing slot + optional chevron.
@@ -304,7 +388,7 @@ fun SettingsRow(
                 // is what made a no-subtitle last row read ~50px shorter.
                 .heightIn(min = minHeight)
                 .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = Spacing.ExtraLarge, vertical = Spacing.Large),
             // #10 keep the trailing control (Switch/value) vertically centered
             // against the title — already centered, kept explicit.
             verticalAlignment = Alignment.CenterVertically,
@@ -313,7 +397,7 @@ fun SettingsRow(
                 Box(
                     modifier = Modifier
                         .size(30.dp)
-                        .background(iconColor, RoundedCornerShape(8.dp)),
+                        .background(iconColor, RoundedCornerShape(Radius.Small)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -323,7 +407,7 @@ fun SettingsRow(
                         modifier = Modifier.size(18.dp),
                     )
                 }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(Spacing.ExtraLarge))
             }
 
             Column(
@@ -349,12 +433,12 @@ fun SettingsRow(
             }
 
             if (trailing != null) {
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(Spacing.Small))
                 trailing()
             }
 
             if (showChevron) {
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(Spacing.Tiny))
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
@@ -366,13 +450,7 @@ fun SettingsRow(
 
         if (showDivider) {
             val insetStart = if (icon != null) 58.dp else 14.dp
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = insetStart, end = 14.dp)
-                    .height(0.5.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-            )
+            SettingsCardRowDivider(startInset = insetStart)
         }
     }
 }
@@ -457,12 +535,12 @@ fun SettingsChoiceRow(
                 // choice/radio rows line up with toggle/value rows in mixed lists.
                 .heightIn(min = 56.dp)
                 .clickable(onClick = onSelect)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = Spacing.Huge, vertical = Spacing.Large),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (leading != null) {
                 leading()
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(Spacing.Large))
             }
             Text(
                 title,
@@ -473,20 +551,14 @@ fun SettingsChoiceRow(
             if (selected) {
                 Icon(
                     Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.common_selected),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp),
                 )
             }
         }
         if (showDivider) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 14.dp)
-                    .height(0.5.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-            )
+            SettingsCardRowDivider(startInset = Spacing.Huge)
         }
     }
 }
@@ -502,7 +574,7 @@ fun SettingsCardBlock(
 ) {
     Column(
         modifier = modifier
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = Spacing.Huge, vertical = Spacing.Large)
             .fillMaxWidth(),
         content = content,
     )

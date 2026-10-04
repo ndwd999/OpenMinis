@@ -237,7 +237,7 @@ fun FileBrowserScreen(
             text = { Text(msg) },
             confirmButton = {
                 MinisTextButton(onClick = { viewModel.dismissError() }) {
-                    Text("OK")  // OK is locale-neutral
+                    Text(stringResource(R.string.ok))
                 }
             },
         )
@@ -340,7 +340,7 @@ private fun FileItemRow(
                 if (item.isSymlink) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "link",
+                        text = stringResource(R.string.filebrowser_symlink_badge),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.tertiary,
                     )

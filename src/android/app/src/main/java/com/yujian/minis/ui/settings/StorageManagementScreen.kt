@@ -295,7 +295,7 @@ internal fun StorageManagementScreen(
                             .background(MaterialTheme.colorScheme.surfaceContainerLow),
                     ) {
                         StorageSessionRow(
-                            title = session.title ?: "Untitled",
+                            title = session.title ?: stringResource(R.string.storage_session_untitled),
                             size = Formatter.formatFileSize(context, session.totalSize),
                             selecting = state.selecting,
                             selected = session.id in state.selectedIds,
@@ -541,7 +541,7 @@ fun SessionStorageDetailScreen(
     val totalSize = minisSize + mediaSize
     val hasFiles = totalSize > 0
 
-    SettingsScaffold(title = session?.title ?: "Session", onBack = onBack) {
+    SettingsScaffold(title = session?.title ?: stringResource(R.string.storage_session_title_fallback), onBack = onBack) {
         SettingsSection(header = stringResource(R.string.storage_section_minis_files)) {
             if (minisSize > 0) {
                 SettingsValueRow(
@@ -566,7 +566,7 @@ fun SessionStorageDetailScreen(
         SettingsSection(header = stringResource(R.string.storage_section_media)) {
             if (mediaSize > 0) {
                 SettingsValueRow(
-                    title = "Media",
+                    title = stringResource(R.string.storage_media_row_title),
                     value = Formatter.formatFileSize(context, mediaSize),
                     showDivider = false,
                 )
@@ -625,7 +625,7 @@ fun SessionStorageDetailScreen(
             onDismissRequest = { showClearDialog = false },
             title = { Text(stringResource(R.string.storage_clear_confirm_title)) },
             text = {
-                Text("This will delete ${Formatter.formatFileSize(context, totalSize)} of files. This action cannot be undone.")
+                Text(stringResource(R.string.storage_clear_confirm_text, Formatter.formatFileSize(context, totalSize)))
             },
             confirmButton = {
                 MinisTextButton(onClick = {
@@ -663,7 +663,7 @@ fun SessionStorageDetailScreen(
                     }
                 }) {
                     Text(
-                        "Clear ${Formatter.formatFileSize(context, totalSize)}",
+                        stringResource(R.string.storage_clear_confirm_button, Formatter.formatFileSize(context, totalSize)),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }

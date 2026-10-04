@@ -363,13 +363,13 @@ fun SkillsManagementScreen(
         val skill = skills.find { it.id == deleteSkillId }
         AlertDialog(
             onDismissRequest = { deleteSkillId = null },
-            title = { Text("Delete ${skill?.name ?: "skill"}?") },
+            title = { Text(stringResource(R.string.skill_delete_confirm_title, skill?.name ?: "skill")) },
             text = { Text(stringResource(R.string.skill_delete_confirm_text)) },
             confirmButton = {
                 MinisTextButton(onClick = {
                     deleteSkillId?.let { skillRepository.delete(it) }
                     deleteSkillId = null
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 MinisTextButton(onClick = { deleteSkillId = null }) { Text(stringResource(R.string.common_cancel)) }
@@ -411,7 +411,7 @@ private fun SkillImportSheet(
             // `SkillsManagementView.documentPicker` + `SkillStore.importFromArchive`.
             val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             if (bytes == null) {
-                errorText = "Failed to read file"
+                errorText = context.getString(R.string.skill_import_error_read_failed_plain)
                 return@rememberLauncherForActivityResult
             }
             // PK\x03\x04 = standard ZIP local file header; PK\x05\x06 is the
@@ -428,15 +428,15 @@ private fun SkillImportSheet(
                     java.io.ByteArrayInputStream(bytes),
                 )
                 if (result != null) onDismiss()
-                else errorText = "Invalid skill archive — no SKILL.md found at the root or one directory deep"
+                else errorText = context.getString(R.string.skill_import_error_archive_invalid)
             } else {
                 val content = String(bytes, Charsets.UTF_8)
                 val result = skillRepository.importFromContent(content, SkillRepository.ImportSource.FILE)
                 if (result != null) onDismiss()
-                else errorText = "Invalid SKILL.md content"
+                else errorText = context.getString(R.string.skill_import_error_content_invalid)
             }
         } catch (e: Exception) {
-            errorText = "Failed to read file: ${e.message}"
+            errorText = context.getString(R.string.skill_import_error_read_failed, e.message)
         }
     }
 
@@ -530,7 +530,7 @@ private fun SkillImportSheet(
                                             // sibling python scripts never made it to local storage.
                                             val result = skillRepository.importFromGitHub(urlText.trim())
                                             if (result != null) onDismiss() else errorText = context.getString(R.string.skill_import_error_invalid)
-                                        } catch (e: Exception) { errorText = "Error: ${e.message}" }
+                                        } catch (e: Exception) { errorText = context.getString(R.string.skill_import_error_generic, e.message) }
                                         finally { isLoading = false }
                                     }
                                 }
@@ -705,7 +705,7 @@ fun SkillDetailScreen(
                     Text(skill.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.width(4.dp))
                     Icon(
-                        Icons.Default.Edit, contentDescription = "Edit name",
+                        Icons.Default.Edit, contentDescription = stringResource(R.string.skill_edit_name),
                         modifier = Modifier.size(14.dp).clickable {
                             editName = skill.name
                             showEditNameDialog = true
@@ -829,7 +829,7 @@ fun SkillDetailScreen(
             val preview = previewLines.joinToString("\n") + if (hasMore) "\n…" else ""
 
             if (preview.isNotEmpty()) {
-                DetailSection(header = "Description") {
+                DetailSection(header = stringResource(R.string.skill_detail_section_description)) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         MarkdownText(
                             markdown = preview,
@@ -848,7 +848,7 @@ fun SkillDetailScreen(
                 skillRepository.listSkillFiles(skill.id)
                     .ifEmpty { listOf("SKILL.md") }
             }
-            DetailSection(header = "Files") {
+            DetailSection(header = stringResource(R.string.skill_detail_section_files)) {
                 skillFiles.forEachIndexed { index, relativePath ->
                     if (index > 0) DetailDivider()
                     DetailRow(clickable = true, onClick = { onFileClick(skill.id, relativePath) }) {
@@ -890,7 +890,7 @@ fun SkillDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete ${skill.name}?") },
+            title = { Text(stringResource(R.string.skill_delete_confirm_title, skill.name)) },
             text = { Text(stringResource(R.string.skill_delete_confirm_text)) },
             confirmButton = {
                 MinisTextButton(onClick = {
@@ -898,7 +898,7 @@ fun SkillDetailScreen(
                     skillRepository.delete(skill.id)
                     showDeleteDialog = false
                     onBack()
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 MinisTextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.common_cancel)) }

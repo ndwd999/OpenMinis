@@ -337,7 +337,7 @@ private fun TestContent(run: QuickTestRun) {
                 )
             } else {
                 Text(
-                    "Received ${s.data.size} bytes (couldn't decode preview)",
+                    stringResource(R.string.quicktest_image_undecodable, s.data.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -444,7 +444,7 @@ internal suspend fun performTest(
     fun failure(msg: String) = QuickTestState.Failure(msg)
 
     val instance = providerRepository.instance(entry.providerInstanceId)
-        ?: return@withContext failure("Provider instance not found.")
+        ?: return@withContext failure(context.getString(R.string.quicktest_error_provider_missing))
     // [T-android-keyless-provider-selection] usableApiKey, NOT loadApiKey.
     //
     // A self-hosted OpenAI/Anthropic-compatible endpoint (ollama, LM Studio,
@@ -460,7 +460,7 @@ internal suspend fun performTest(
     // null for an official endpoint with no key, so providers that genuinely
     // require one keep failing fast with the same message.
     val apiKey = providerRepository.usableApiKey(instance)
-        ?: return@withContext failure("No API key configured for this provider.")
+        ?: return@withContext failure(context.getString(R.string.quicktest_error_no_api_key))
 
     // [T-android-provider-voice] Speech tests route through the VoiceProvider
     // stack (vendor adapters + endpoints), NOT the chat provider — mirrors iOS
@@ -491,7 +491,7 @@ internal suspend fun performTest(
                         } else {
                             QuickTestState.AudioReply(data)
                         }
-                    }.getOrElse { failure(it.message ?: "Speech request failed.") }
+                    }.getOrElse { failure(it.message ?: context.getString(R.string.quicktest_error_speech_failed)) }
                 }
             }
             else -> { // TRANSCRIPTION
@@ -510,11 +510,11 @@ internal suspend fun performTest(
                                 resolvedModel = entry.model,
                             ),
                         )
-                        val heard = resp.text.trim().ifEmpty { "(empty transcription)" }
+                        val heard = resp.text.trim().ifEmpty { context.getString(R.string.quicktest_empty_transcription) }
                         QuickTestState.TextReply(
                             context.getString(R.string.quicktest_transcript_result, spoken, heard),
                         )
-                    }.getOrElse { failure(it.message ?: "Transcription request failed.") }
+                    }.getOrElse { failure(it.message ?: context.getString(R.string.quicktest_error_transcription_failed)) }
                 }
             }
         }
@@ -522,7 +522,7 @@ internal suspend fun performTest(
 
     val provider = runCatching {
         ProviderFactory.create(instance, apiKey, entry.model, context, overrides = entry.overrides)
-    }.getOrElse { return@withContext failure(it.message ?: "Couldn't create provider.") }
+    }.getOrElse { return@withContext failure(it.message ?: context.getString(R.string.quicktest_error_provider_create_failed)) }
 
     when (kind) {
         QuickTestKind.TEXT -> {
@@ -542,7 +542,7 @@ internal suspend fun performTest(
                 QuickTestState.TextReply(
                     text.ifEmpty { context.getString(R.string.quicktest_empty_reply) },
                 )
-            }.getOrElse { failure(it.message ?: "Request failed.") }
+            }.getOrElse { failure(it.message ?: context.getString(R.string.quicktest_error_request_failed)) }
         }
 
         QuickTestKind.IMAGE_GEN -> {
@@ -559,7 +559,7 @@ internal suspend fun performTest(
                     it.type == LLMMediaAttachment.MediaType.IMAGE
                 } ?: return@runCatching failure(context.getString(R.string.quicktest_no_image))
                 QuickTestState.ImageReply(img.data)
-            }.getOrElse { failure(it.message ?: "Image request failed.") }
+            }.getOrElse { failure(it.message ?: context.getString(R.string.quicktest_error_image_failed)) }
         }
 
         // Handled above.

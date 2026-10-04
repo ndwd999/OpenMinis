@@ -82,6 +82,83 @@ private val NeutralDarkGroupedCard = Color(0xFF1C1C1E)
 private val NeutralDarkGroupedCardElevated = Color(0xFF2C2C2E)
 private val NeutralDarkOutline = Color(0xFF38383A)
 
+// ---------------------------------------------------------------------------
+// iOS system accents — theme-INVARIANT on purpose.
+//
+// These are the seven `UIColor.system*` values the Swift side reaches for
+// directly (Color.blue, .green, .red, .orange, .yellow, .pink, .gray). Unlike
+// the palette above they have no light/dark variant here: iOS ships one
+// saturated accent per role and both appearances use the same hue, so these
+// stay plain `val`s rather than becoming ChatPalette fields. Reading one from
+// ChatColors would be wrong — that would silently re-tint them per appearance.
+//
+// They were previously re-typed as raw `Color(0x...)` at ~95 call sites across
+// a dozen files (settings rows, session category chips, tool accents, status
+// dots, terminal buttons). The values are the contract; the name is only a
+// handle. Nothing here is derived — each is the byte-for-byte literal that
+// stood at those call sites.
+// ---------------------------------------------------------------------------
+object IosAccents {
+    val Blue = Color(0xFF007AFF)
+    val Green = Color(0xFF34C759)
+    val Red = Color(0xFFFF3B30)
+    val Orange = Color(0xFFFF9500)
+    val Yellow = Color(0xFFFFCC00)
+    val Pink = Color(0xFFFF2D55)
+    val Gray = Color(0xFF8E8E93)
+}
+
+// ---------------------------------------------------------------------------
+// LLM-provider brand dots.
+//
+// One dot colour per ProviderType, used by the model picker, the entry picker
+// and the agent-loop sheets so the same provider reads as the same colour
+// everywhere. These are vendor brand hues, not iOS system colours, and they
+// are deliberately NOT in IosAccents: OpenAI's green (#4CAF50) and Anthropic's
+// purple are brand identities that happen to sit near system colours, and
+// folding them in would invite someone to "unify" them later.
+//
+// Previously duplicated as two byte-identical `providerDotColor` functions
+// (a private one in the picker sheet, a public one in the entry picker), each
+// re-typing all eight literals.
+// ---------------------------------------------------------------------------
+object ProviderBrandColors {
+    val Anthropic = Color(0xFFAB47BC)
+    val Gemini = Color(0xFF42A5F5)
+    val OpenAI = Color(0xFF4CAF50)
+    val OpenRouter = Color(0xFF00BCD4)
+    val Xai = Color(0xFFFF7043)
+    val KimiCode = Color(0xFF5C6BC0)
+    val GitHubCopilot = Color(0xFF6E5494)
+}
+
+// ---------------------------------------------------------------------------
+// Session category chip hues.
+//
+// The 16 categories in ContentView.swift:1897-1916 do not map 1:1 onto
+// colours — "code" and "travel" share one, "writing" and "education" share
+// another — so these are named for the HUE they carry rather than the category
+// that happens to use them, which is what lets both categories point at the
+// same token without inventing a second name for the same value.
+//
+// Categories whose colour IS a system accent (creative/design → pink,
+// chat → green, health → red, productivity → yellow, other → gray) keep using
+// [IosAccents] directly and are deliberately absent here.
+//
+// Previously duplicated as two byte-identical `categoryStyle` functions in
+// SessionListScreen and MoveToSessionSheet, each re-typing every literal.
+// ---------------------------------------------------------------------------
+object SessionCategoryColors {
+    val Amber = Color(0xFFF09A37)
+    val Azure = Color(0xFF3478F6)
+    val Teal = Color(0xFF30B0C7)
+    val Indigo = Color(0xFF5856D6)
+    val Violet = Color(0xFF9B59B6)
+    val Cyan = Color(0xFF00BCD4)
+    val Mint = Color(0xFF00C7BE)
+    val Bronze = Color(0xFF8B6914)
+}
+
 private val LightColorScheme = lightColorScheme(
     primary = TealPrimary,
     onPrimary = TealOnPrimary,

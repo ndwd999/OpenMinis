@@ -556,7 +556,7 @@ private fun MdText(
                         clipboardManager.setText(AnnotatedString(snippet))
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         val preview = if (snippet.length > 40) snippet.take(37) + "…" else snippet
-                        Toast.makeText(context, "Copied: $preview", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.chat_copied_preview, preview), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -2770,7 +2770,7 @@ private fun RenderInlineMath(latex: String, fontSize: TextUnit) {
             )
             androidx.compose.foundation.Image(
                 bitmap = rendered.bitmap.asImageBitmap(),
-                contentDescription = "math: $latex",
+                contentDescription = stringResource(R.string.a11y_math_expression, latex),
                 modifier = Modifier.size(naturalWidthDp * fit, naturalHeightDp * fit),
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
             )
@@ -3151,7 +3151,7 @@ private fun RenderMdVideo(block: MdBlock.Video) {
             }
             Icon(
                 imageVector = Icons.Filled.PlayCircleFilled,
-                contentDescription = "Play video",
+                contentDescription = stringResource(R.string.a11y_play_video),
                 tint = Color.White.copy(alpha = 0.9f),
                 modifier = Modifier.size(56.dp),
             )
@@ -3274,7 +3274,7 @@ private fun RenderMdAudio(block: MdBlock.Audio) {
         }
         Icon(
             imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-            contentDescription = if (isPlaying) "Pause" else "Play",
+            contentDescription = if (isPlaying) stringResource(R.string.common_pause) else stringResource(R.string.common_play),
             tint = tint,
             modifier = Modifier.size(28.dp),
         )

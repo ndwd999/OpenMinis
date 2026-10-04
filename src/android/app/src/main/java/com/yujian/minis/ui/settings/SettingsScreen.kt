@@ -70,7 +70,8 @@ import androidx.compose.ui.res.stringResource
 import com.yujian.minis.BuildConfig
 import com.yujian.minis.R
 import com.yujian.minis.ui.components.openExternalUrl
-import com.yujian.minis.i18n.uppercaseForDisplay
+import com.yujian.minis.ui.theme.IosAccents
+import com.yujian.minis.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -137,26 +138,27 @@ fun SettingsScreen(
         ) {
             // -- LLM Providers --
             SettingsSection(
-                title = stringResource(R.string.settings_section_llm_providers),
+                header = stringResource(R.string.settings_section_llm_providers),
                 footer = stringResource(R.string.settings_section_llm_providers_footer),
+                spec = CompactSettingsSectionSpec,
             ) {
                 SettingsItem(
                     icon = Icons.Outlined.Lock,
-                    iconColor = Color(0xFF007AFF),
+                    iconColor = IosAccents.Blue,
                     title = stringResource(R.string.settings_manage_providers),
                     subtitle = stringResource(R.string.settings_manage_providers_subtitle),
                     onClick = onProvidersClick,
                 )
                 SettingsItem(
                     icon = Icons.Outlined.Settings,
-                    iconColor = Color(0xFF007AFF),
+                    iconColor = IosAccents.Blue,
                     title = stringResource(R.string.settings_model_groups),
                     subtitle = stringResource(R.string.settings_model_groups_subtitle),
                     onClick = onModelGroupsClick,
                 )
                 SettingsItem(
                     icon = Icons.Outlined.BarChart,
-                    iconColor = Color(0xFF007AFF),
+                    iconColor = IosAccents.Blue,
                     title = stringResource(R.string.settings_token_usage),
                     subtitle = stringResource(R.string.settings_token_usage_subtitle),
                     onClick = onUsageClick,
@@ -165,7 +167,7 @@ fun SettingsScreen(
             }
 
             // -- Appearance --
-            SettingsSection(title = stringResource(R.string.settings_section_appearance)) {
+            SettingsSection(header = stringResource(R.string.settings_section_appearance), spec = CompactSettingsSectionSpec) {
                 SettingsItem(
                     icon = Icons.Outlined.Palette,
                     iconColor = Color(0xFF5856D6),
@@ -187,7 +189,7 @@ fun SettingsScreen(
             // connects to (MCP, env). Android had grown its own order simply by
             // appending each row as it landed, which put the two capability
             // switches in the middle of the identity rows.
-            SettingsSection(title = stringResource(R.string.settings_section_agent_runtime)) {
+            SettingsSection(header = stringResource(R.string.settings_section_agent_runtime), spec = CompactSettingsSectionSpec) {
                 // [T-tools-granular-switches] Which optional tools the agent may use.
                 SettingsItem(
                     icon = Icons.Outlined.Handyman,
@@ -205,7 +207,7 @@ fun SettingsScreen(
                 )
                 SettingsItem(
                     icon = Icons.Outlined.Extension,
-                    iconColor = Color(0xFF007AFF),
+                    iconColor = IosAccents.Blue,
                     title = stringResource(R.string.settings_skills),
                     subtitle = stringResource(R.string.settings_skills_subtitle),
                     onClick = onSkillsClick,
@@ -213,7 +215,7 @@ fun SettingsScreen(
                 // [T-soul-md] Between Skills and Memory, as on iOS.
                 SettingsItem(
                     icon = Icons.Outlined.AutoAwesome,
-                    iconColor = Color(0xFFFF9500),
+                    iconColor = IosAccents.Orange,
                     title = stringResource(R.string.settings_soul),
                     subtitle = stringResource(R.string.settings_soul_subtitle),
                     onClick = onSoulClick,
@@ -238,7 +240,7 @@ fun SettingsScreen(
                 )
                 SettingsItem(
                     icon = Icons.Outlined.Terminal,
-                    iconColor = Color(0xFF34C759),
+                    iconColor = IosAccents.Green,
                     title = stringResource(R.string.settings_env_vars),
                     subtitle = stringResource(R.string.settings_env_vars_subtitle),
                     onClick = onEnvVarsClick,
@@ -247,24 +249,24 @@ fun SettingsScreen(
             }
 
             // -- Storage --
-            SettingsSection(title = stringResource(R.string.settings_section_storage)) {
+            SettingsSection(header = stringResource(R.string.settings_section_storage), spec = CompactSettingsSectionSpec) {
                 SettingsItem(
                     icon = Icons.Outlined.Inventory2,
-                    iconColor = Color(0xFF007AFF),
+                    iconColor = IosAccents.Blue,
                     title = stringResource(R.string.settings_section_storage),
                     subtitle = stringResource(R.string.settings_storage_subtitle),
                     onClick = onRootfsClick,
                 )
                 SettingsItem(
                     icon = Icons.Outlined.Folder,
-                    iconColor = Color(0xFF34C759),
+                    iconColor = IosAccents.Green,
                     title = stringResource(R.string.settings_shared_folders),
                     subtitle = stringResource(R.string.settings_shared_folders_subtitle),
                     onClick = onSharedFoldersClick,
                 )
                 SettingsItem(
                     icon = Icons.Outlined.FolderShared,
-                    iconColor = Color(0xFFFF9500),
+                    iconColor = IosAccents.Orange,
                     title = stringResource(R.string.settings_mount_external_folders),
                     subtitle = stringResource(R.string.settings_mount_external_folders_subtitle),
                     onClick = onMountedFoldersClick,
@@ -275,10 +277,10 @@ fun SettingsScreen(
             }
 
             // -- Permissions --
-            SettingsSection(title = stringResource(R.string.settings_section_permissions)) {
+            SettingsSection(header = stringResource(R.string.settings_section_permissions), spec = CompactSettingsSectionSpec) {
                 SettingsItem(
                     icon = Icons.Outlined.Shield,
-                    iconColor = Color(0xFF007AFF),
+                    iconColor = IosAccents.Blue,
                     title = stringResource(R.string.settings_section_permissions),
                     subtitle = stringResource(R.string.settings_permissions_subtitle),
                     onClick = onPermissionsClick,
@@ -288,12 +290,13 @@ fun SettingsScreen(
 
             // -- Background & Notifications (T50) --
             SettingsSection(
-                title = stringResource(R.string.bg_section_header),
+                header = stringResource(R.string.bg_section_header),
                 footer = stringResource(R.string.bg_section_footer),
+                spec = CompactSettingsSectionSpec,
             ) {
                 SettingsItem(
                     icon = Icons.Outlined.BatteryFull,
-                    iconColor = Color(0xFFFF9500),
+                    iconColor = IosAccents.Orange,
                     title = stringResource(R.string.bg_section_header),
                     subtitle = stringResource(R.string.bg_section_subtitle),
                     onClick = onBackgroundClick,
@@ -302,10 +305,10 @@ fun SettingsScreen(
             }
 
             // -- Logs --
-            SettingsSection(title = stringResource(R.string.settings_section_logs)) {
+            SettingsSection(header = stringResource(R.string.settings_section_logs), spec = CompactSettingsSectionSpec) {
                 SettingsItem(
                     icon = Icons.Outlined.Description,
-                    iconColor = Color(0xFF007AFF),
+                    iconColor = IosAccents.Blue,
                     title = stringResource(R.string.settings_section_logs),
                     subtitle = stringResource(R.string.settings_logs_subtitle),
                     onClick = onLogsClick,
@@ -314,17 +317,17 @@ fun SettingsScreen(
             }
 
             // -- About --
-            SettingsSection(title = stringResource(R.string.settings_section_about)) {
+            SettingsSection(header = stringResource(R.string.settings_section_about), spec = CompactSettingsSectionSpec) {
                 SettingsItem(
                     icon = Icons.Outlined.Info,
-                    iconColor = Color(0xFF007AFF),
+                    iconColor = IosAccents.Blue,
                     title = stringResource(R.string.settings_about_minis),
                     subtitle = stringResource(R.string.settings_about_subtitle),
                     onClick = onAboutClick,
                 )
                 SettingsItem(
                     icon = Icons.Outlined.FrontHand,
-                    iconColor = Color(0xFF007AFF),
+                    iconColor = IosAccents.Blue,
                     title = stringResource(R.string.settings_privacy_policy),
                     subtitle = null,
                     // iOS canonical URL — ContentView.swift / AddProviderView.swift
@@ -332,7 +335,7 @@ fun SettingsScreen(
                 )
                 SettingsItem(
                     icon = Icons.Outlined.Feedback,
-                    iconColor = Color(0xFF007AFF),
+                    iconColor = IosAccents.Blue,
                     title = stringResource(R.string.settings_feedback),
                     subtitle = null,
                     onClick = { showFeedbackSheet = true },
@@ -386,7 +389,7 @@ private fun FeedbackSheetItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = Spacing.Giant, vertical = Spacing.ExtraLarge),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -395,7 +398,7 @@ private fun FeedbackSheetItem(
             tint = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(22.dp),
         )
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(Spacing.Huge))
         Text(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
@@ -502,53 +505,10 @@ private fun buildFeedbackMailto(): String {
     return "mailto:dev@openminis.app?subject=$subject&body=$encodedBody"
 }
 
-/**
- * A grouped settings section with header and optional footer, matching iOS grouped List sections.
- */
-@Composable
-private fun SettingsSection(
-    title: String,
-    footer: String? = null,
-    content: @Composable () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 20.dp),
-    ) {
-        // Section header
-        Text(
-            text = title.uppercaseForDisplay(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 0.5.sp,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-        )
-
-        // Section card
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(color = MaterialTheme.colorScheme.surfaceContainerLow),
-        ) {
-            content()
-        }
-
-        // Section footer
-        if (footer != null) {
-            Text(
-                text = footer,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
-                lineHeight = 16.sp,
-            )
-        }
-    }
-}
+// `SettingsSection` used to be a file-private copy of the shared section in
+// SettingsComponents.kt, with its own tighter geometry. It now calls the shared
+// one with [CompactSettingsSectionSpec], which reproduces this screen's exact
+// paddings and corner radius.
 
 /**
  * A single settings row item with colored icon, title, optional subtitle, and chevron.
@@ -568,7 +528,7 @@ private fun SettingsItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = Spacing.ExtraLarge, vertical = Spacing.Large),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Colored circle icon (matching iOS settings style)
@@ -589,7 +549,7 @@ private fun SettingsItem(
                 )
             }
 
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(Spacing.ExtraLarge))
 
             // Title + subtitle
             Column(
@@ -624,7 +584,7 @@ private fun SettingsItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 58.dp, end = 14.dp)
+                    .padding(start = 58.dp, end = Spacing.ExtraLarge)
                     .height(0.5.dp)
                     .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
             )

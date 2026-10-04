@@ -50,7 +50,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import coil.compose.AsyncImage
+import com.yujian.minis.R
 import com.yujian.minis.sandbox.PRootKernel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -232,7 +234,7 @@ private fun CodeBlockView(block: MarkdownParser.Block.CodeBlock) {
             ) {
                 Icon(
                     Icons.Default.ContentCopy,
-                    contentDescription = "Copy code",
+                    contentDescription = stringResource(R.string.a11y_copy_code),
                     modifier = Modifier.height(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -831,7 +833,7 @@ private fun MinisVideoBlock(block: MarkdownParser.Block.Video) {
             }
             Icon(
                 imageVector = Icons.Filled.PlayCircleFilled,
-                contentDescription = "Play video",
+                contentDescription = stringResource(R.string.a11y_play_video),
                 tint = Color.White.copy(alpha = 0.9f),
                 modifier = Modifier.width(56.dp).height(56.dp),
             )
@@ -961,7 +963,7 @@ private fun MinisAudioBlock(block: MarkdownParser.Block.Audio) {
         }
         Icon(
             imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-            contentDescription = if (isPlaying) "Pause" else "Play",
+            contentDescription = if (isPlaying) stringResource(R.string.common_pause) else stringResource(R.string.common_play),
             tint = tint,
             modifier = Modifier.width(28.dp).height(28.dp),
         )

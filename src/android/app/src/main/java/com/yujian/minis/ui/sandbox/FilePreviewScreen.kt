@@ -395,7 +395,7 @@ private fun TextPreview(item: FileItem) {
             ) {
                 if (truncated) {
                     Text(
-                        text = "Showing first ${MAX_TEXT_PREVIEW_BYTES / 1000} KB of ${item.formattedSize}",
+                        text = stringResource(R.string.filepreview_showing_first_kb, MAX_TEXT_PREVIEW_BYTES / 1000, item.formattedSize),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -476,7 +476,7 @@ private fun MarkdownPreview(item: FileItem) {
             ),
         )
         else -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Loading...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.common_loading), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -702,7 +702,7 @@ private fun CsvPreview(item: FileItem) {
             Column(Modifier.fillMaxSize()) {
                 if (truncated) {
                     Text(
-                        text = "Showing first 200 rows of ${item.formattedSize}",
+                        text = stringResource(R.string.filepreview_showing_first_rows, 200, item.formattedSize),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -794,7 +794,7 @@ private fun JsonPreview(item: FileItem) {
         else -> Column(Modifier.fillMaxSize()) {
             if (truncated) {
                 Text(
-                    text = "Showing first ${MAX_TEXT_PREVIEW_BYTES / 1000} KB of ${item.formattedSize}",
+                    text = stringResource(R.string.filepreview_showing_first_kb, MAX_TEXT_PREVIEW_BYTES / 1000, item.formattedSize),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -1174,7 +1174,7 @@ private fun FileInfoView(item: FileItem) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Preview not available",
+                    stringResource(R.string.filepreview_unavailable),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

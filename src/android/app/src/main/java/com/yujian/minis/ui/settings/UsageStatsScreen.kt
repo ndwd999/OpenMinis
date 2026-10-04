@@ -34,6 +34,7 @@ import com.yujian.minis.data.db.ChatDao
 import com.yujian.minis.data.model.LLMModel
 import com.yujian.minis.data.model.ProviderConfig
 import com.yujian.minis.data.model.ProviderType
+import com.yujian.minis.ui.theme.Spacing
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -284,7 +285,7 @@ private fun ExpandableModelRow(model: ModelStats, showDivider: Boolean) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { expanded = !expanded }
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = Spacing.Huge, vertical = Spacing.Large),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -331,7 +332,7 @@ private fun ExpandableModelRow(model: ModelStats, showDivider: Boolean) {
         }
 
         AnimatedVisibility(visible = expanded) {
-            Column(modifier = Modifier.padding(start = 32.dp, end = 16.dp, bottom = 8.dp)) {
+            Column(modifier = Modifier.padding(start = 32.dp, end = Spacing.Huge, bottom = Spacing.Small)) {
                 DetailRow(stringResource(R.string.usage_detail_input), formatCount(model.inputTokens))
                 DetailRow(stringResource(R.string.usage_detail_output), formatCount(model.outputTokens))
                 if (model.cacheReadTokens > 0) DetailRow(stringResource(R.string.usage_label_cache_read), formatCount(model.cacheReadTokens))
@@ -359,7 +360,7 @@ private fun ExpandableModelRow(model: ModelStats, showDivider: Boolean) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 14.dp)
+                    .padding(start = Spacing.Huge, end = Spacing.ExtraLarge)
                     .height(0.5.dp)
                     .background(divider),
             )

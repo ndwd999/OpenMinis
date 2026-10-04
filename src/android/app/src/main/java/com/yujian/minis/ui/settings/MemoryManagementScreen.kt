@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.yujian.minis.data.repository.MemoryRepository
 import com.yujian.minis.ui.components.DialogTextField
+import com.yujian.minis.ui.theme.Spacing
 
 /**
  * Settings-level memory file management.
@@ -97,7 +98,7 @@ fun MemoryManagementScreen(
                 showDivider = false,
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Spacing.Huge))
 
         if (files.isEmpty()) {
             Column(
@@ -108,7 +109,7 @@ fun MemoryManagementScreen(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(stringResource(R.string.memory_empty_title), style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.Small))
                 Text(
                     stringResource(R.string.memory_empty_description),
                     style = MaterialTheme.typography.bodyMedium,
@@ -128,13 +129,13 @@ fun MemoryManagementScreen(
                     )
                     if (index < files.size - 1) {
                         HorizontalDivider(
-                            modifier = Modifier.padding(start = 16.dp),
+                            modifier = Modifier.padding(start = Spacing.Huge),
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                         )
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.Huge))
         }
     }
 
@@ -174,7 +175,7 @@ private fun MemoryFileRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = Spacing.Huge, vertical = Spacing.Large),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -204,7 +205,7 @@ private fun MemoryFileRow(
                 Row(
                     modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.ExtraSmall),
                 ) {
                     Text(
                         file.name,
@@ -223,7 +224,7 @@ private fun MemoryFileRow(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.Small))
                 Text(
                     file.modifiedDate,
                     style = MaterialTheme.typography.labelSmall,
@@ -330,7 +331,7 @@ fun MemoryFileEditScreen(
                             saveError = e.message
                         }
                     }) {
-                        Text("Save")
+                        Text(stringResource(R.string.common_save))
                     }
                 },
             )
@@ -340,9 +341,9 @@ fun MemoryFileEditScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = Spacing.Huge),
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.Small))
 
             // Editor
             DialogTextField(
@@ -364,7 +365,7 @@ fun MemoryFileEditScreen(
                     stringResource(R.string.memory_global_footer),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.Huge, vertical = Spacing.Small),
                 )
             }
 
@@ -373,11 +374,11 @@ fun MemoryFileEditScreen(
                     saveError!!,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.Huge, vertical = Spacing.Tiny),
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.Huge))
         }
     }
 }

@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.yujian.minis.ui.theme.IosAccents
 import java.io.File
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.Image
@@ -328,7 +329,7 @@ internal fun ToolDetailSheet(
                 ) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.common_close),
                         tint = ChatColors.primaryText,
                         modifier = Modifier.size(16.dp),
                     )
@@ -572,7 +573,7 @@ internal fun ToolDetailSheet(
                                                 text = linkified,
                                                 fontSize = 13.sp,
                                                 fontFamily = FontFamily.Monospace,
-                                                color = Color(0xFF34C759),  // iOS .green
+                                                color = IosAccents.Green,  // iOS .green
                                                 lineHeight = 18.sp,
                                             )
                                         }
@@ -599,14 +600,14 @@ internal fun ToolDetailSheet(
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Medium,
                                             fontFamily = FontFamily.Monospace,
-                                            color = Color(0xFF34C759),  // iOS .green
+                                            color = IosAccents.Green,  // iOS .green
                                         )
                                         Text(
                                             text = sheetMonitor.formattedMem(),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Medium,
                                             fontFamily = FontFamily.Monospace,
-                                            color = Color(0xFF34C759),
+                                            color = IosAccents.Green,
                                         )
                                     }
                                 }
@@ -632,8 +633,8 @@ internal fun ToolDetailSheet(
                         // T126-fix: ChatPalette.isDark follows the in-app theme
                         // override, isSystemInDarkTheme() doesn't.
                         val isDark = ChatColors.isDark
-                        val cardBg = if (isDark) Color(0xFF1A1A1A) else Color(0xFFF0F0F0)
-                        val cardBorder = if (isDark) Color(0xFF404040) else Color(0xFFD1D1D1)
+                        val cardBg = ChatColors.toolCardBg
+                        val cardBorder = ChatColors.toolCardBorder
                         val redBg = if (isDark) Color(0xFF4D1414) else Color(0xFFFFE5E5)
                         val redText = if (isDark) Color(0xFFFF6666) else Color(0xFFCC1A1A)
                         val greenBg = if (isDark) Color(0xFF144D14) else Color(0xFFE5FFE5)
@@ -690,7 +691,7 @@ internal fun ToolDetailSheet(
                                     Icon(
                                         Icons.Default.EditNote,
                                         contentDescription = null,
-                                        tint = Color(0xFFFF9500),
+                                        tint = IosAccents.Orange,
                                         modifier = Modifier.size(12.dp),
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -772,7 +773,7 @@ internal fun ToolDetailSheet(
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                text = "Edited",
+                                                text = stringResource(R.string.tool_detail_edited_label),
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = ChatColors.primaryText,
@@ -910,7 +911,7 @@ internal fun ToolDetailSheet(
                                             fontWeight = FontWeight.SemiBold,
                                             color = Color.White,
                                             modifier = Modifier
-                                                .background(Color(0xFF007AFF), CircleShape)
+                                                .background(IosAccents.Blue, CircleShape)
                                                 .padding(horizontal = 10.dp, vertical = 2.dp),
                                         )
                                     }
@@ -946,7 +947,7 @@ internal fun ToolDetailSheet(
                                     screenshotBitmap.height.coerceAtLeast(1)
                                 Image(
                                     bitmap = screenshotBitmap.asImageBitmap(),
-                                    contentDescription = "Browser screenshot",
+                                    contentDescription = stringResource(R.string.a11y_browser_screenshot),
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -975,7 +976,7 @@ internal fun ToolDetailSheet(
                                             strokeWidth = 2.dp,
                                             color = ChatColors.link,
                                         )
-                                        Text("Loading...", fontSize = 12.sp, color = ChatColors.tertiaryText)
+                                        Text(stringResource(R.string.common_loading), fontSize = 12.sp, color = ChatColors.tertiaryText)
                                     }
                                 }
                             }
@@ -1005,7 +1006,7 @@ internal fun ToolDetailSheet(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "Result",
+                                            text = stringResource(R.string.tool_detail_result_label),
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Medium,
                                             color = ChatColors.secondaryText,
@@ -1273,7 +1274,7 @@ internal fun ToolDetailSheet(
                     ) {
                         Icon(
                             Icons.Default.SkipPrevious,
-                            contentDescription = "Previous",
+                            contentDescription = stringResource(R.string.common_previous),
                             tint = if (currentIdx > 0) ChatColors.primaryText else ChatColors.disabledText,
                             modifier = Modifier.size(22.dp),
                         )
@@ -1290,10 +1291,10 @@ internal fun ToolDetailSheet(
                             Box(
                                 modifier = Modifier
                                     .size(7.dp)
-                                    .background(Color(0xFF34C759), CircleShape),
+                                    .background(IosAccents.Green, CircleShape),
                             )
                             Text(
-                                "Live",
+                                stringResource(R.string.tool_detail_live_label),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = ChatColors.primaryText,
@@ -1319,7 +1320,7 @@ internal fun ToolDetailSheet(
                     ) {
                         Icon(
                             Icons.Default.SkipNext,
-                            contentDescription = "Next",
+                            contentDescription = stringResource(R.string.common_next),
                             tint = if (currentIdx < toolBlocks.lastIndex) ChatColors.primaryText else ChatColors.disabledText,
                             modifier = Modifier.size(22.dp),
                         )
@@ -1524,7 +1525,7 @@ private fun LazyRevealToolText(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Load more ($nextLines lines)",
+                    text = stringResource(R.string.tool_detail_load_more_lines, nextLines),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = color.copy(alpha = 0.9f),
@@ -1533,7 +1534,7 @@ private fun LazyRevealToolText(
                     },
                 )
                 Text(
-                    text = "Load all (~$remainingLines)",
+                    text = stringResource(R.string.tool_detail_load_all_lines, remainingLines),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = color.copy(alpha = 0.9f),
@@ -1571,13 +1572,12 @@ private fun EditorCard(
     //               border white:0.25 (#404040)
     //   iOS light : body white:0.94 (#F0F0F0), header white:0.92 (#EBEBEB),
     //               border white:0.82 (#D1D1D1)
-    // T126-fix: use ChatPalette.isDark so the in-app theme override (Settings →
-    // Appearance) wins over the system setting. Otherwise users on Light system
-    // + Dark in-app would see white card on black chat.
-    val isDark = ChatColors.isDark
-    val cardBg = if (isDark) Color(0xFF1A1A1A) else Color(0xFFF0F0F0)
-    val headerBg = if (isDark) Color(0xFF212121) else Color(0xFFEBEBEB)
-    val cardBorder = if (isDark) Color(0xFF404040) else Color(0xFFD1D1D1)
+    // T126-fix: the palette reads ChatPalette.isDark, so the in-app theme
+    // override (Settings → Appearance) wins over the system setting. Otherwise
+    // users on Light system + Dark in-app would see a white card on black chat.
+    val cardBg = ChatColors.toolCardBg
+    val headerBg = ChatColors.toolCardHeaderBg
+    val cardBorder = ChatColors.toolCardBorder
 
     Column(
         modifier = Modifier
@@ -1615,7 +1615,7 @@ private fun EditorCard(
                     Text(
                         text = if (isStreaming) "($sizeLabel received)" else "($sizeLabel)",
                         fontSize = 11.sp,
-                        color = if (isStreaming) Color(0xFFFF9500).copy(alpha = 0.8f) else sizeColor,
+                        color = if (isStreaming) IosAccents.Orange.copy(alpha = 0.8f) else sizeColor,
                     )
                 }
             }

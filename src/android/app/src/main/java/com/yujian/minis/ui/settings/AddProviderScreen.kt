@@ -158,8 +158,8 @@ private fun ChooseProviderScreen(
         ) {
             addableProviderTypes.forEachIndexed { index, type ->
                 val displayTitle = when (type) {
-                    ProviderType.openAI -> "OpenAI / Compatible API"
-                    ProviderType.anthropic -> "Anthropic / Compatible API"
+                    ProviderType.openAI -> stringResource(R.string.add_provider_type_openai)
+                    ProviderType.anthropic -> stringResource(R.string.add_provider_type_anthropic)
                     ProviderType.gemini -> "Google Gemini"
                     else -> type.displayName
                 }
@@ -327,8 +327,8 @@ private fun ColumnScope.ApiKeyConfigSection(
     val keyPlaceholder = when (providerType) {
         ProviderType.anthropic -> "sk-ant-..."
         ProviderType.openAI -> "sk-..."
-        ProviderType.gemini -> "Gemini API Key..."
-        else -> "API Key..."
+        ProviderType.gemini -> stringResource(R.string.add_provider_key_placeholder_gemini)
+        else -> stringResource(R.string.add_provider_key_placeholder_default)
     }
     SettingsSection(
         header = stringResource(R.string.add_provider_credential),
@@ -346,7 +346,7 @@ private fun ColumnScope.ApiKeyConfigSection(
                     IconButton(onClick = { showApiKeyPlaintext = !showApiKeyPlaintext }) {
                         Icon(
                             if (showApiKeyPlaintext) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = if (showApiKeyPlaintext) "Hide" else "Show",
+                            contentDescription = if (showApiKeyPlaintext) stringResource(R.string.common_hide) else stringResource(R.string.common_show),
                         )
                     }
                 },
@@ -371,13 +371,13 @@ private fun ColumnScope.ApiKeyConfigSection(
     // without scraping issue threads. Default Anthropic + other
     // provider types keep their original footer copy.
     val baseUrlFooter = if (providerType == ProviderType.gemini) {
-        "Leave empty to use the default Google endpoint. Enter the full base URL including version path."
+        stringResource(R.string.add_provider_endpoint_hint_gemini)
     } else if (providerType == ProviderType.anthropic) {
         stringResource(R.string.add_provider_endpoint_anthropic_hint)
     } else if (appendV1Suffix) {
-        "Leave empty to use the default endpoint. \"/v1\" is appended automatically — enter the base host only."
+        stringResource(R.string.add_provider_endpoint_hint_v1)
     } else {
-        "The URL is used verbatim. Include the full path up to (but not including) the endpoint."
+        stringResource(R.string.add_provider_endpoint_hint_verbatim)
     }
     SettingsSection(
         header = stringResource(R.string.add_provider_endpoint),

@@ -331,7 +331,7 @@ private suspend fun importSkillFromCurrentUrl(
             onStateChange(HudState.HIDDEN, "")
         }
     } catch (e: Exception) {
-        onStateChange(HudState.ERROR, e.message ?: "Import failed")
+        onStateChange(HudState.ERROR, e.message ?: context.getString(R.string.skills_browser_import_failed))
         delay(4000)
         onStateChange(HudState.HIDDEN, "")
     }

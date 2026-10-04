@@ -52,6 +52,8 @@ import com.yujian.minis.data.model.isVoiceInputCandidate
 import com.yujian.minis.data.model.isVoiceOutputCandidate
 import com.yujian.minis.data.model.hasImageInput
 import com.yujian.minis.data.model.normalizeModalities
+import com.yujian.minis.ui.theme.IosAccents
+import com.yujian.minis.ui.theme.ProviderBrandColors
 
 /**
  * [T-android-provider-voice] First-class modality scoping for the shared
@@ -428,7 +430,7 @@ private fun SelectionDot(isSelected: Boolean) {
     Icon(
         if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
         contentDescription = null,
-        tint = if (isSelected) Color(0xFF007AFF)
+        tint = if (isSelected) IosAccents.Blue
         else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
         modifier = Modifier.size(20.dp),
     )
@@ -487,20 +489,20 @@ fun ModalityBadge(badge: String) {
 /** Provider color dot — same RGB across ChatScreen, AddModelsToGroup, and
  *  the agent-loop sheets so the visual cue stays consistent everywhere. */
 fun providerDotColor(providerType: ProviderType?): Color = when (providerType) {
-    ProviderType.anthropic -> Color(0xFFAB47BC)
-    ProviderType.gemini -> Color(0xFF42A5F5)
-    ProviderType.openAI -> Color(0xFF4CAF50)
-    ProviderType.openRouter -> Color(0xFF00BCD4)
-    ProviderType.xAI -> Color(0xFFFF7043)
-    ProviderType.kimiCode -> Color(0xFF5C6BC0) // indigo — Kimi accent
-    ProviderType.githubCopilot -> Color(0xFF6E5494) // purple — GitHub accent
+    ProviderType.anthropic -> ProviderBrandColors.Anthropic
+    ProviderType.gemini -> ProviderBrandColors.Gemini
+    ProviderType.openAI -> ProviderBrandColors.OpenAI
+    ProviderType.openRouter -> ProviderBrandColors.OpenRouter
+    ProviderType.xAI -> ProviderBrandColors.Xai
+    ProviderType.kimiCode -> ProviderBrandColors.KimiCode // indigo — Kimi accent
+    ProviderType.githubCopilot -> ProviderBrandColors.GitHubCopilot // purple — GitHub accent
     // [T-android-provider-type-parity] Responses API instances are
     // OpenAI under the hood — same green dot. Undrivable types share
     // the neutral gray used for "no provider".
-    ProviderType.openAIResponses -> Color(0xFF4CAF50)
+    ProviderType.openAIResponses -> ProviderBrandColors.OpenAI
     ProviderType.antigravity,
-    ProviderType.unsupported -> Color(0xFF8E8E93)
-    null -> Color(0xFF8E8E93)
+    ProviderType.unsupported -> IosAccents.Gray
+    null -> IosAccents.Gray
 }
 
 /**

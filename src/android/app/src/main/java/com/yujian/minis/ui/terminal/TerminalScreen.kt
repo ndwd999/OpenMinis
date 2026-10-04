@@ -66,15 +66,16 @@ import com.yujian.minis.ui.terminal.canvas.TerminalNativeViewCompose
 import com.yujian.minis.ui.terminal.canvas.TerminalInputView
 import com.yujian.minis.ui.terminal.canvas.rememberTerminalInputController
 import com.yujian.minis.ui.terminal.emulator.TerminalEmulator
+import com.yujian.minis.ui.theme.IosAccents
 import kotlinx.coroutines.launch
 
 // iOS-matched palette
 private val TerminalBg = Color(0xFF000000)
 private val TerminalFg = Color(0xFFD4D4D4)
-private val TerminalGreen = Color(0xFF34C759)
+private val TerminalGreen = IosAccents.Green
 private val AccessoryBg = Color(0xFF1F1F1F)
 private val AccButtonBg = Color(0xFF404040)
-private val AccButtonActive = Color(0xFF007AFF)
+private val AccButtonActive = IosAccents.Blue
 private val TopButtonBg = Color(0xFF2C2C2E)
 
 @Composable

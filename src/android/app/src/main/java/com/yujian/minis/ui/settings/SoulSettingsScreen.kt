@@ -214,7 +214,7 @@ fun SoulSettingsScreen(onBack: () -> Unit) {
                 withContext(Dispatchers.IO) { SoulStore.save(context, currentFile) }
                 onBack()
             } catch (t: Throwable) {
-                saveError = t.message ?: "save failed"
+                saveError = t.message ?: context.getString(R.string.soul_save_failed)
             }
         }
         Unit

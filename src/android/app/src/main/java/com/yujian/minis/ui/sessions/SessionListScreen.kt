@@ -72,28 +72,15 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Book
-import androidx.compose.material.icons.outlined.Brush
-import androidx.compose.material.icons.outlined.Calculate
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChecklistRtl
 import androidx.compose.material.icons.outlined.Circle
-import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Terminal
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Forum
-import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.MoreHoriz
-import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Translate
 import android.content.Intent
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -156,7 +143,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
@@ -180,6 +166,7 @@ import com.yujian.minis.R
 import com.yujian.minis.data.db.ChatSessionEntity
 import com.yujian.minis.data.db.FolderEntity
 import com.yujian.minis.ui.theme.ChatColors
+import com.yujian.minis.ui.theme.IosAccents
 import com.yujian.minis.ui.theme.minisFabColor
 import com.yujian.minis.data.repository.ChatRepository
 import com.yujian.minis.data.repository.ProviderRepository
@@ -193,34 +180,15 @@ import java.util.concurrent.TimeUnit
 import com.yujian.minis.ui.components.MinisTextButton
 import com.yujian.minis.ui.components.rememberDecorativeTick
 import com.yujian.minis.ui.components.decorativePhase
+import com.yujian.minis.ui.components.sessionCategoryStyle
 import androidx.compose.ui.graphics.graphicsLayer
 
 // FAB color — use shared theme values
 
-private data class CategoryStyle(val icon: ImageVector, val color: Color)
-
-// 16 categories matching iOS (ContentView.swift:1897-1916)
-private fun categoryStyle(category: String?): CategoryStyle {
-    return when (category?.lowercase()) {
-        "code"         -> CategoryStyle(Icons.Outlined.Code, Color(0xFFF09A37))
-        "writing"      -> CategoryStyle(Icons.Outlined.Description, Color(0xFF3478F6))
-        "research"     -> CategoryStyle(Icons.Outlined.Language, Color(0xFF30B0C7))
-        "analysis"     -> CategoryStyle(Icons.Outlined.BarChart, Color(0xFF5856D6))
-        "creative"     -> CategoryStyle(Icons.Outlined.Brush, Color(0xFFFF2D55))
-        "chat"         -> CategoryStyle(Icons.Outlined.Forum, Color(0xFF34C759))
-        "math"         -> CategoryStyle(Icons.Outlined.Calculate, Color(0xFF9B59B6))
-        "translation"  -> CategoryStyle(Icons.Outlined.Translate, Color(0xFF00BCD4))
-        "health"       -> CategoryStyle(Icons.Outlined.Favorite, Color(0xFFFF3B30))
-        "finance"      -> CategoryStyle(Icons.Outlined.Payments, Color(0xFF00C7BE))
-        "travel"       -> CategoryStyle(Icons.Outlined.Map, Color(0xFFF09A37))
-        "education"    -> CategoryStyle(Icons.Outlined.Book, Color(0xFF3478F6))
-        "design"       -> CategoryStyle(Icons.Outlined.Palette, Color(0xFFFF2D55))
-        "productivity" -> CategoryStyle(Icons.Outlined.CalendarMonth, Color(0xFFFFCC00))
-        "support"      -> CategoryStyle(Icons.Outlined.Settings, Color(0xFF8B6914))
-        "other"        -> CategoryStyle(Icons.Outlined.GridView, Color(0xFF8E8E93))
-        else           -> CategoryStyle(Icons.Outlined.Forum, Color(0xFF8E8E93))
-    }
-}
+// The category → (icon, tint) table now lives in
+// ui/components/SessionCategoryStyle.kt as the single shared
+// `sessionCategoryStyle`, so this list and the "move to session" sheet can
+// no longer drift apart (they each carried a byte-identical private copy).
 
 // Date period for section grouping (matching iOS)
 private enum class DatePeriod(val label: String) {
@@ -1689,7 +1657,7 @@ private fun DualFabRow(
                     .shadow(8.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.2f)),
                 elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
             ) {
-                Icon(Icons.Outlined.Forum, contentDescription = "New Chat", tint = Color.White, modifier = Modifier.size(24.dp))
+                Icon(Icons.Outlined.Forum, contentDescription = stringResource(R.string.new_chat), tint = Color.White, modifier = Modifier.size(24.dp))
             }
             DropdownMenu(
                 expanded = showGroupMenu,
@@ -2391,7 +2359,7 @@ private fun groupGlyphPath(side: Float): Path = Path().apply {
  */
 @Composable
 private fun FolderComposedIcon(category: String?, diameter: Dp = 44.dp) {
-    val tint = categoryStyle(category).color
+    val tint = sessionCategoryStyle(category).color
     Box(
         modifier = Modifier
             .size(diameter)
@@ -2529,7 +2497,7 @@ private fun FolderCard(
                 // would leave the user guessing which row it refers to.
                 if (block.isCollapsed && block.anyActive) {
                     SpinningRing(
-                        color = categoryStyle(block.firstCategory).color,
+                        color = sessionCategoryStyle(block.firstCategory).color,
                         modifier = Modifier
                             .size(42.dp)
                             .align(Alignment.Center),
@@ -2722,7 +2690,7 @@ private fun SessionRow(
      */
     isFolderMember: Boolean = false,
 ) {
-    val style = remember(session.category) { categoryStyle(session.category) }
+    val style = remember(session.category) { sessionCategoryStyle(session.category) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val timeText = remember(session.updatedAt, ctx) { relativeDate(ctx, session.updatedAt) }
     val rowHaptics = androidx.compose.ui.platform.LocalHapticFeedback.current
@@ -3011,7 +2979,7 @@ private fun SessionRow(
                 )
             } else {
                 Text(
-                    text = session.lastMessage ?: "No messages yet",
+                    text = session.lastMessage ?: stringResource(R.string.sessionlist_no_messages),
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -3129,7 +3097,7 @@ private fun SessionBadgeOverlay(
                     .background(
                         // Solid system-orange. Picked over yellow so the
                         // alert reads as "attention" rather than "info".
-                        color = Color(0xFFFF9500),
+                        color = IosAccents.Orange,
                         shape = CircleShape,
                     )
                     .border(
@@ -3275,7 +3243,7 @@ private fun SetupStepCard(
             modifier = Modifier
                 .size(32.dp)
                 .background(
-                    color = if (isDone) Color(0xFF34C759) else MaterialTheme.colorScheme.primary,
+                    color = if (isDone) IosAccents.Green else MaterialTheme.colorScheme.primary,
                     shape = CircleShape,
                 ),
             contentAlignment = Alignment.Center,
@@ -3352,6 +3320,7 @@ internal fun SessionEditSheet(
 ) {
     var title by remember { mutableStateOf(session.title ?: "") }
     var selectedCategory by remember { mutableStateOf(session.category) }
+    val newChatTitle = stringResource(R.string.new_chat)
 
     // [T-android-sessionedit-regenerate-button] When a regeneration run writes a
     // new title/category to the DB, `liveSession` updates — mirror those values
@@ -3378,17 +3347,17 @@ internal fun SessionEditSheet(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                MinisTextButton(onClick = onDismiss) { Text("Cancel") }
+                MinisTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "Edit Session",
+                    stringResource(R.string.sessionlist_edit_sheet_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.weight(1f))
                 MinisTextButton(
-                    onClick = { onSave(title.ifBlank { "New Chat" }, selectedCategory) },
-                ) { Text("Save") }
+                    onClick = { onSave(title.ifBlank { newChatTitle }, selectedCategory) },
+                ) { Text(stringResource(R.string.common_save)) }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -3397,7 +3366,7 @@ internal fun SessionEditSheet(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Title") },
+                label = { Text(stringResource(R.string.sessionlist_field_title)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -3405,7 +3374,7 @@ internal fun SessionEditSheet(
             Spacer(Modifier.height(20.dp))
 
             Text(
-                "Category",
+                stringResource(R.string.sessionlist_field_category),
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
@@ -3419,7 +3388,7 @@ internal fun SessionEditSheet(
             ) {
                 items(allCategories) { cat ->
                     val isSelected = selectedCategory?.equals(cat, ignoreCase = true) == true
-                    val style = categoryStyle(cat.lowercase())
+                    val style = sessionCategoryStyle(cat.lowercase())
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))

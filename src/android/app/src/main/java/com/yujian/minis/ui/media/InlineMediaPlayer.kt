@@ -60,11 +60,13 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.yujian.minis.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.io.File
@@ -138,7 +140,7 @@ fun InlineAudioPlayer(
     ) {
         if (error != null) {
             Text(
-                "Audio error: $error",
+                stringResource(R.string.media_audio_error, error.toString()),
                 modifier = Modifier.padding(12.dp),
                 color = MaterialTheme.colorScheme.error,
                 fontSize = 12.sp,
@@ -209,7 +211,7 @@ fun InlineAudioPlayer(
                         ) {
                             Icon(
                                 Icons.Default.Stop,
-                                contentDescription = "Stop",
+                                contentDescription = stringResource(R.string.common_stop),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp),
                             )
@@ -494,7 +496,7 @@ private fun FullscreenVideoContent(file: File, onDismiss: () -> Unit) {
             ) {
                 CircleControlButton(
                     icon = Icons.Default.Close,
-                    contentDescription = "Close",
+                    contentDescription = stringResource(R.string.common_close),
                     onClick = {
                         try { videoView?.pause() } catch (_: Throwable) {}
                         onDismiss()
@@ -510,7 +512,7 @@ private fun FullscreenVideoContent(file: File, onDismiss: () -> Unit) {
                 )
                 CircleControlButton(
                     icon = Icons.Default.Share,
-                    contentDescription = "Share",
+                    contentDescription = stringResource(R.string.common_share),
                     onClick = { shareMediaFile(context, file, "video/*") },
                 )
             }

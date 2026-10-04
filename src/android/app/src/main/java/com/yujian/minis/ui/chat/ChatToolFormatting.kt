@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.ui.graphics.Color
+import com.yujian.minis.ui.theme.IosAccents
 
 // [T-android-split-chat] Pure tool-label / duration / timestamp formatting
 // helpers extracted verbatim from ChatScreen.kt. `internal` so the rest of the
@@ -54,17 +55,17 @@ internal fun formatStepDuration(seconds: Long, stillRunning: Boolean): String {
 
 // Helper: tool accent color
 internal fun toolAccentColor(toolName: String): Color = when (toolName) {
-    "shell_execute" -> Color(0xFF34C759)
+    "shell_execute" -> IosAccents.Green
     "file_read" -> Color(0xFF32ADE6)
-    "file_write" -> Color(0xFF007AFF)
-    "file_edit" -> Color(0xFFFF9500)
-    "browser_use" -> Color(0xFF007AFF)
+    "file_write" -> IosAccents.Blue
+    "file_edit" -> IosAccents.Orange
+    "browser_use" -> IosAccents.Blue
     "read_image" -> Color(0xFFAF52DE)
-    "memory_write", "memory_get" -> Color(0xFFFF2D55)
+    "memory_write", "memory_get" -> IosAccents.Pink
     "web_search" -> Color(0xFF32ADE6)    // iOS: .cyan for search
     // [T-sub-agents-v1] Current name + the pre-rename one still in shipped transcripts.
     "subagent_task", "delegate_task", "agent_status" -> HelperAccentStatic  // iOS: HelperAccent.color (electric violet)
-    else -> Color(0xFF8E8E93)
+    else -> IosAccents.Gray
 }
 
 // Helper: tool icon (iOS: distinct SF Symbols per tool type)

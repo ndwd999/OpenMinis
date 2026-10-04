@@ -35,6 +35,7 @@ import com.yujian.minis.AppBuildInfo
 import com.yujian.minis.BuildConfig
 import com.yujian.minis.R
 import com.yujian.minis.ui.components.openExternalUrl
+import com.yujian.minis.ui.theme.Spacing
 
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
@@ -45,9 +46,9 @@ fun AboutScreen(onBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 24.dp),
+                .padding(horizontal = Spacing.Huge, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.Small),
         ) {
             val iconPainter = remember(context) {
                 // painterResource() can't load adaptive-icon XML drawables (mipmap-anydpi-v26),

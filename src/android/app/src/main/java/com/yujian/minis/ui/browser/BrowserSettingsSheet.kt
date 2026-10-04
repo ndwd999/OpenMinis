@@ -296,8 +296,12 @@ fun BrowserSettingsSheet(
             Spacer(Modifier.height(4.dp))
             Text(
                 stringResource(R.string.browser_settings_idle_timeout_desc) + " " +
-                    "(default ${BrowserTabPool.DEFAULT_IDLE_TIMEOUT_MINUTES}, range " +
-                    "${BrowserTabPool.MIN_IDLE_TIMEOUT_MINUTES}–${BrowserTabPool.MAX_IDLE_TIMEOUT_MINUTES}).",
+                    stringResource(
+                        R.string.browser_settings_idle_timeout_range,
+                        BrowserTabPool.DEFAULT_IDLE_TIMEOUT_MINUTES,
+                        BrowserTabPool.MIN_IDLE_TIMEOUT_MINUTES,
+                        BrowserTabPool.MAX_IDLE_TIMEOUT_MINUTES,
+                    ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -489,7 +493,7 @@ private fun ViewportSection(
     onPreset: (Int, Int) -> Unit,
 ) {
     Text(
-        "Web Viewport",
+        stringResource(R.string.browser_settings_viewport_section),
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
     )
@@ -507,7 +511,7 @@ private fun ViewportSection(
             onClick = onSelectDefault,
         )
         Column(modifier = Modifier.weight(1f)) {
-            Text("Default (auto by UA)", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.browser_settings_viewport_default), style = MaterialTheme.typography.bodyMedium)
             val (uaW, uaH) = selectedProfile.viewportSize
             Text(
                 "${uaW} × $uaH",
@@ -529,9 +533,9 @@ private fun ViewportSection(
             onClick = onSelectCustom,
         )
         Column(modifier = Modifier.weight(1f)) {
-            Text("Custom", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.browser_settings_viewport_custom), style = MaterialTheme.typography.bodyMedium)
             Text(
-                "Set your own width × height",
+                stringResource(R.string.browser_settings_viewport_custom_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -548,7 +552,7 @@ private fun ViewportSection(
             OutlinedTextField(
                 value = widthText,
                 onValueChange = onWidthChange,
-                label = { Text("Width") },
+                label = { Text(stringResource(R.string.browser_settings_viewport_width)) },
                 singleLine = true,
                 // [T-android-browser-settings-keyboard-overlap] focus →
                 // scroll-into-view so the soft keyboard doesn't cover
@@ -563,7 +567,7 @@ private fun ViewportSection(
             OutlinedTextField(
                 value = heightText,
                 onValueChange = onHeightChange,
-                label = { Text("Height") },
+                label = { Text(stringResource(R.string.browser_settings_viewport_height)) },
                 singleLine = true,
                 // [T-android-browser-settings-keyboard-overlap] focus →
                 // scroll-into-view; mirrors the Width field.
@@ -584,7 +588,7 @@ private fun ViewportSection(
 
         Spacer(Modifier.height(12.dp))
         Text(
-            "Quick Set",
+            stringResource(R.string.browser_settings_viewport_quick_set),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -640,27 +644,28 @@ private fun ViewportSection(
     val (resW, resH) = tabPool.resolvedViewportSize()
     Text(
         if (isCustomActive) {
-            "Using custom viewport $resW × $resH. Tap Default to revert to the UA default."
+            stringResource(R.string.browser_settings_viewport_custom_active, resW, resH)
         } else {
-            "Using UA default $resW × $resH. Set a custom size to override."
+            stringResource(R.string.browser_settings_viewport_ua_active, resW, resH)
         },
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
+@Composable
 private fun uaMismatchWarning(profile: UserAgentProfile, widthText: String): String? {
     val width = widthText.toIntOrNull() ?: return null
     if (width <= 0) return null
     return when (profile) {
         UserAgentProfile.MOBILE_CHROME, UserAgentProfile.CUSTOM -> {
             if (width >= VIEWPORT_UA_BREAKPOINT) {
-                "Viewport ≥${VIEWPORT_UA_BREAKPOINT}px while UA is Mobile — sites may serve a desktop layout that renders awkwardly. Consider switching UA to Desktop."
+                stringResource(R.string.browser_settings_viewport_ua_mismatch_mobile, VIEWPORT_UA_BREAKPOINT)
             } else null
         }
         UserAgentProfile.DESKTOP_CHROME -> {
             if (width < VIEWPORT_UA_BREAKPOINT) {
-                "Viewport <${VIEWPORT_UA_BREAKPOINT}px while UA is Desktop — sites may serve a mobile layout that renders awkwardly. Consider switching UA to Mobile."
+                stringResource(R.string.browser_settings_viewport_ua_mismatch_desktop, VIEWPORT_UA_BREAKPOINT)
             } else null
         }
     }

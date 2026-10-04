@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.yujian.minis.ui.theme.IosAccents
 import java.io.File
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.Image
@@ -305,11 +306,11 @@ import com.yujian.minis.ui.theme.ChatColors
 import com.yujian.minis.ui.components.MinisTextButton
 
 // iOS ChatColors equivalent
-internal val ToolCheckColor = Color(0xFF34C759) // iOS .green
-internal val ToolErrorColor = Color(0xFFFF3B30) // iOS .red
-internal val ToolCancelColor = Color(0xFFFFCC00) // iOS .yellow
+internal val ToolCheckColor = IosAccents.Green // iOS .green
+internal val ToolErrorColor = IosAccents.Red // iOS .red
+internal val ToolCancelColor = IosAccents.Yellow // iOS .yellow
 // Memory tool accent — matches iOS `.pink` on SF Symbols.
-internal val ToolMemoryAccent = Color(0xFFFF2D55)
+internal val ToolMemoryAccent = IosAccents.Pink
 // Sparkle gradient colors (iOS uses linear gradient)
 internal val SparkleColor1 = Color(0xFFB8B096) // rgb(0.72, 0.69, 0.59)
 internal val SparkleColor2 = Color(0xFF99998C) // rgb(0.6, 0.6, 0.55)
@@ -1010,7 +1011,7 @@ fun ChatScreen(
         if (uris.size > ATTACHMENT_PICK_LIMIT) {
             android.widget.Toast.makeText(
                 context,
-                "Only the first $ATTACHMENT_PICK_LIMIT items were attached.",
+                context.getString(R.string.chat_attachment_pick_limit_items, ATTACHMENT_PICK_LIMIT),
                 android.widget.Toast.LENGTH_SHORT,
             ).show()
         }
@@ -1144,7 +1145,7 @@ fun ChatScreen(
         if (uris.size > ATTACHMENT_PICK_LIMIT) {
             android.widget.Toast.makeText(
                 context,
-                "Only the first $ATTACHMENT_PICK_LIMIT files were attached.",
+                context.getString(R.string.chat_attachment_pick_limit_files, ATTACHMENT_PICK_LIMIT),
                 android.widget.Toast.LENGTH_SHORT,
             ).show()
         }
@@ -2930,7 +2931,7 @@ fun ChatScreen(
                                         modifier = Modifier
                                             .size(6.dp)
                                             .background(
-                                                if (modelName.isNotEmpty()) Color(0xFF34C759) else Color(0xFFFF9500),
+                                                if (modelName.isNotEmpty()) IosAccents.Green else IosAccents.Orange,
                                                 CircleShape,
                                             ),
                                     )
@@ -3081,7 +3082,7 @@ fun ChatScreen(
                                                 contentAlignment = Alignment.Center,
                                                 modifier = Modifier
                                                     .size(11.dp)
-                                                    .background(Color(0xFFFF9500), CircleShape),
+                                                    .background(IosAccents.Orange, CircleShape),
                                             ) {
                                                 Icon(
                                                     Icons.Default.Bolt,
@@ -3140,7 +3141,7 @@ fun ChatScreen(
                     // [T-android-tablet-split] See `isTwoPane`.
                     if (!isTwoPane) {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                         }
                     } else if (onToggleSidebar != null) {
                         // [T-android-tablet-sidebar-collapse] The slot the back
@@ -3218,7 +3219,7 @@ fun ChatScreen(
                     // iOS: "..." circle button → dropdown menu
                     Box {
                         IconButton(onClick = { showChatMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.common_more))
                         }
                         MinisMenu(
                             expanded = showChatMenu,
@@ -5137,7 +5138,7 @@ fun ChatScreen(
                             // anchor" for the turn-walk, and keeps this button visually
                             // distinct from the down button's plain chevron.
                             imageVector = Icons.Default.VerticalAlignTop,
-                            contentDescription = "Scroll to previous message",
+                            contentDescription = stringResource(R.string.a11y_scroll_to_previous_message),
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -5185,7 +5186,7 @@ fun ChatScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Scroll to bottom",
+                            contentDescription = stringResource(R.string.a11y_scroll_to_bottom),
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -5915,7 +5916,7 @@ fun ChatScreen(
                                     }
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        "Move to…",
+                                        stringResource(R.string.move_to_sheet_title),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = ChatColors.secondaryText,
@@ -6752,7 +6753,7 @@ fun ChatScreen(
                             ) {
                                 Icon(
                                     Icons.Default.Add,
-                                    contentDescription = "Attach",
+                                    contentDescription = stringResource(R.string.a11y_attach),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp),
                                 )
@@ -7306,14 +7307,14 @@ fun ChatScreen(
                             Box(
                                 modifier = Modifier
                                     .size(38.dp)
-                                    .background(Color(0xFFFF3B30), CircleShape)
+                                    .background(IosAccents.Red, CircleShape)
                                     .clip(CircleShape)
                                     .clickable { viewModel.cancelStream() },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     Icons.Default.Stop,
-                                    contentDescription = "Stop",
+                                    contentDescription = stringResource(R.string.common_stop),
                                     tint = Color.White,
                                     modifier = Modifier.size(20.dp),
                                 )

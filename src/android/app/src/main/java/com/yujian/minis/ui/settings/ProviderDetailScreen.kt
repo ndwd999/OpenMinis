@@ -372,21 +372,21 @@ fun ProviderDetailScreen(
         if (instance.supportsImageEndpointSetting) {
             val mode = instance.imageEndpointMode
             SettingsSection(
-                header = "Image Generation",
+                header = stringResource(R.string.provider_detail_image_section_header),
                 footer = when (mode) {
                     com.yujian.minis.data.model.ImageEndpointMode.auto ->
                         if (instance.imageEndpointResolved != null) {
                             val resolved = if (instance.imageEndpointResolved ==
                                 com.yujian.minis.data.model.ImageEndpointMode.imagesGenerations
                             ) "/v1/images/generations" else "/v1/chat/completions"
-                            "Auto: tries /v1/images/generations first, falls back to /v1/chat/completions. Last successful endpoint: $resolved."
+                            stringResource(R.string.provider_detail_image_footer_auto_resolved, resolved)
                         } else {
-                            "Auto: tries /v1/images/generations first, falls back to /v1/chat/completions. Caches the working endpoint after the first call."
+                            stringResource(R.string.provider_detail_image_footer_auto_cached)
                         }
                     com.yujian.minis.data.model.ImageEndpointMode.imagesGenerations ->
-                        "Always use /v1/images/generations."
+                        stringResource(R.string.provider_detail_image_footer_always_images)
                     com.yujian.minis.data.model.ImageEndpointMode.chatCompletions ->
-                        "Always use /v1/chat/completions (multimodal output)."
+                        stringResource(R.string.provider_detail_image_footer_always_chat)
                 },
             ) {
                 SettingsCardBlock {
@@ -403,7 +403,7 @@ fun ProviderDetailScreen(
                                 }
                             },
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
-                        ) { Text("Auto") }
+                        ) { Text(stringResource(R.string.provider_detail_image_mode_auto)) }
                         SegmentedButton(
                             selected = mode == com.yujian.minis.data.model.ImageEndpointMode.imagesGenerations,
                             onClick = {
@@ -418,7 +418,7 @@ fun ProviderDetailScreen(
                                 }
                             },
                             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
-                        ) { Text("Images API") }
+                        ) { Text(stringResource(R.string.provider_detail_image_mode_images_api)) }
                         SegmentedButton(
                             selected = mode == com.yujian.minis.data.model.ImageEndpointMode.chatCompletions,
                             onClick = {
@@ -432,7 +432,7 @@ fun ProviderDetailScreen(
                                 }
                             },
                             shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
-                        ) { Text("Chat") }
+                        ) { Text(stringResource(R.string.provider_detail_image_mode_chat)) }
                     }
                 }
             }
@@ -489,7 +489,8 @@ fun ProviderDetailScreen(
             // Refresh action sits as the first row, mirroring the iOS
             // tap-to-refresh affordance in the section header area.
             SettingsRow(
-                title = if (isRefreshing) "Refreshing…" else "Refresh model list",
+                title = if (isRefreshing) stringResource(R.string.provider_detail_refresh_model_list_progress)
+                        else stringResource(R.string.provider_detail_refresh_model_list),
                 onClick = if (isRefreshing) {
                     null
                 } else {
@@ -576,11 +577,12 @@ fun ProviderDetailScreen(
                     val outputModalities = entry.model.outputModalities.orEmpty()
                     val hasBadge = inputModalities.any { it in modalityIconKeys } ||
                         outputModalities.any { it in modalityOutputIconKeys }
+                    val hiddenLabel = stringResource(R.string.model_entry_hidden)
                     SettingsRow(
                         title = entry.model.displayName,
                         subtitle = buildString {
                             append(entry.model.id)
-                            if (entry.isHidden) append(" • Hidden")
+                            if (entry.isHidden) append(" • " + hiddenLabel)
                         },
                         // onClick = null so SettingsRow doesn't add a second
                         // clickable that would swallow the long-press. The
@@ -771,7 +773,7 @@ private fun ApiKeyCredentialBlock(
                 IconButton(onClick = onToggleVisibility) {
                     Icon(
                         if (keyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (keyVisible) "Hide" else "Show",
+                        contentDescription = if (keyVisible) stringResource(R.string.common_hide) else stringResource(R.string.common_show),
                     )
                 }
             },
@@ -806,7 +808,7 @@ private fun ApiKeyCredentialBlock(
             IconButton(onClick = onToggleVisibility) {
                 Icon(
                     if (keyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                    contentDescription = if (keyVisible) "Hide" else "Show",
+                    contentDescription = if (keyVisible) stringResource(R.string.common_hide) else stringResource(R.string.common_show),
                 )
             }
             MinisSmallTextButton(onClick = onBeginEdit) {

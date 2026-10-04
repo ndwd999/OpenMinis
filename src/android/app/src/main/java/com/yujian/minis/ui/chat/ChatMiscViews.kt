@@ -612,7 +612,7 @@ internal fun FallbackInfoBlock(block: AssistantBlock, onRevert: (() -> Unit)? = 
                 if (hasDetail) {
                     Icon(
                         imageVector = Icons.Default.Info,
-                        contentDescription = "Show full summary",
+                        contentDescription = stringResource(R.string.a11y_show_full_summary),
                         tint = fg,
                         modifier = Modifier
                             .size(14.dp)
@@ -678,7 +678,7 @@ private fun CompactSummarySheet(
     val scope = rememberCoroutineScope()
 
     StandardChatSheet(
-        title = "Compact Summary",
+        title = stringResource(R.string.chat_compact_summary_title),
         onDismiss = onDismiss,
         leadingAction = {
             IconButton(onClick = {
@@ -691,7 +691,7 @@ private fun CompactSummarySheet(
             }) {
                 Icon(
                     imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
-                    contentDescription = "Copy",
+                    contentDescription = stringResource(R.string.common_copy),
                     tint = if (copied) Color(0xFF34C759) else ChatColors.secondaryText,
                 )
             }
@@ -725,7 +725,7 @@ private fun CompactSummarySheet(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Revert Compact",
+                        text = stringResource(R.string.chat_compact_revert_action),
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
@@ -738,12 +738,9 @@ private fun CompactSummarySheet(
     if (showRevertConfirm && onRevert != null) {
         MinisAlertDialog(
             onDismissRequest = { showRevertConfirm = false },
-            title = "Revert this compact?",
-            text = "The summary will be discarded and the messages it covered " +
-                "will become active again. This may push the conversation past " +
-                "the model's context window — if that happens, long-press a " +
-                "message to re-compact from that point.",
-            confirmText = "Revert",
+            title = stringResource(R.string.chat_compact_revert_title),
+            text = stringResource(R.string.chat_compact_revert_message),
+            confirmText = stringResource(R.string.chat_compact_revert_confirm),
             onConfirm = {
                 showRevertConfirm = false
                 onDismiss()

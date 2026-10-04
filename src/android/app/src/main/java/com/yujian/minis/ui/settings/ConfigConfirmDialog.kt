@@ -33,10 +33,12 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import com.yujian.minis.R
 import com.yujian.minis.config.ConfigRisk
 import com.yujian.minis.config.confirm.ConfigConfirmationGate
 import com.yujian.minis.config.confirm.PendingConfigChange
@@ -81,7 +83,11 @@ private fun ConfigConfirmDialog(change: PendingConfigChange) {
         ),
         title = {
             Text(
-                if (workingItems.size > 1) "Confirm ${workingItems.size} changes" else "Confirm change"
+                if (workingItems.size > 1) {
+                    stringResource(R.string.config_confirm_title_changes, workingItems.size)
+                } else {
+                    stringResource(R.string.config_confirm_title_single)
+                }
             )
         },
         text = {
@@ -123,7 +129,7 @@ private fun ConfigConfirmDialog(change: PendingConfigChange) {
         },
         dismissButton = {
             MinisTextButton(onClick = { ConfigConfirmationGate.userReject() }) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         },
     )
@@ -187,11 +193,11 @@ private fun ConfirmRow(item: PendingConfigChangeItem, onToggle: (Boolean) -> Uni
         }
         when (item.risk) {
             ConfigRisk.DESTRUCTIVE -> RiskHint(
-                text = "This may affect later tool calls.",
+                text = stringResource(R.string.config_confirm_risk_destructive),
                 color = MaterialTheme.colorScheme.error,
             )
             ConfigRisk.SENSITIVE -> RiskHint(
-                text = "Reversible, but worth a quick look.",
+                text = stringResource(R.string.config_confirm_risk_sensitive),
                 color = Color(0xFFE65100),
             )
             else -> Unit

@@ -171,7 +171,7 @@ fun ThinkingRulesSection(
                             existingId = null,
                             seed = rule.copy(
                                 kind = ThinkingRule.Kind.CUSTOM,
-                                label = "Copy of ${rule.label}",
+                                label = stringResource(R.string.thinking_rules_copy_label, rule.label),
                             ),
                             isNew = true,
                         )
@@ -260,7 +260,7 @@ private fun ThinkingRuleRow(
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title.ifEmpty { "(unnamed rule)" },
+                    text = title.ifEmpty { stringResource(R.string.thinking_rules_unnamed) },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,

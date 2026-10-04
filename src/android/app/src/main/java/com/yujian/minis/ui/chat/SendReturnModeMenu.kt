@@ -243,7 +243,7 @@ fun ComposerSendButton(
     ) {
         Icon(
             Icons.Default.ArrowUpward,
-            contentDescription = "Send",
+            contentDescription = stringResource(R.string.send),
             tint = if (canActivate) ChatColors.background
             else ChatColors.primaryText.copy(alpha = 0.5f),
             modifier = Modifier.size(20.dp),

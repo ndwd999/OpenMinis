@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.yujian.minis.ui.theme.IosAccents
 import java.io.File
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.Image
@@ -144,6 +145,7 @@ import com.yujian.minis.logging.AppLogger
 import com.yujian.minis.ui.components.MinisAlertDialog
 import com.yujian.minis.ui.components.MinisMenu
 import com.yujian.minis.ui.components.MinisMenuDivider
+import com.yujian.minis.ui.components.providerDotColor
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -202,7 +204,6 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
@@ -269,7 +270,6 @@ import com.yujian.minis.data.model.LLMModel
 import com.yujian.minis.data.model.ModelEntry
 import com.yujian.minis.data.model.ModelGroup
 import com.yujian.minis.data.model.ProviderConfig
-import com.yujian.minis.data.model.ProviderType
 import com.yujian.minis.data.model.RoutingStrategy
 import com.yujian.minis.data.model.ThinkingLevel
 import com.yujian.minis.data.repository.ChatRepository
@@ -626,7 +626,7 @@ internal fun ModelPickerSheet(
                                     Icon(
                                         if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                                         contentDescription = null,
-                                        tint = if (isSelected) Color(0xFF34C759)
+                                        tint = if (isSelected) IosAccents.Green
                                         else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                                         modifier = Modifier.size(22.dp),
                                     )
@@ -642,7 +642,7 @@ internal fun ModelPickerSheet(
                                     Icon(
                                         Icons.Default.Layers,
                                         contentDescription = null,
-                                        tint = Color(0xFF007AFF),
+                                        tint = IosAccents.Blue,
                                         modifier = Modifier.size(18.dp),
                                     )
                                     Spacer(Modifier.width(10.dp))
@@ -722,10 +722,10 @@ internal fun ModelPickerSheet(
                                             fontSize = 9.sp,
                                             lineHeight = 11.sp,
                                             fontWeight = FontWeight.Medium,
-                                            color = Color(0xFF007AFF),
+                                            color = IosAccents.Blue,
                                             modifier = Modifier
                                                 .background(
-                                                    Color(0xFF007AFF).copy(alpha = 0.1f),
+                                                    IosAccents.Blue.copy(alpha = 0.1f),
                                                     RoundedCornerShape(50),
                                                 )
                                                 .padding(horizontal = 5.dp, vertical = 1.dp),
@@ -833,7 +833,7 @@ internal fun ModelPickerSheet(
                                                 Icon(
                                                     if (isActive) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                                                     contentDescription = null,
-                                                    tint = if (isActive) Color(0xFF007AFF)
+                                                    tint = if (isActive) IosAccents.Blue
                                                     else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
                                                     modifier = Modifier.size(17.dp),
                                                 )
@@ -1040,7 +1040,7 @@ internal fun ModelPickerSheet(
                                             Icon(
                                                 if (selectedEntry != null) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                                                 contentDescription = null,
-                                                tint = if (selectedEntry != null) Color(0xFF007AFF)
+                                                tint = if (selectedEntry != null) IosAccents.Blue
                                                 else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                                                 modifier = Modifier.size(20.dp),
                                             )
@@ -1126,7 +1126,7 @@ internal fun ModelPickerSheet(
                                                 Icons.Default.KeyboardArrowDown,
                                                 contentDescription = null,
                                                 modifier = Modifier.size(16.dp),
-                                                tint = Color(0xFF007AFF),
+                                                tint = IosAccents.Blue,
                                             )
                                             Spacer(Modifier.width(4.dp))
                                             Text(
@@ -1136,7 +1136,7 @@ internal fun ModelPickerSheet(
                                                     entries.size,
                                                 ),
                                                 style = MaterialTheme.typography.labelMedium,
-                                                color = Color(0xFF007AFF),
+                                                color = IosAccents.Blue,
                                             )
                                         }
                                         }
@@ -1180,7 +1180,7 @@ internal fun ModelPickerSheet(
                                             Icon(
                                                 if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                                                 contentDescription = null,
-                                                tint = if (isSelected) Color(0xFF007AFF)
+                                                tint = if (isSelected) IosAccents.Blue
                                                 else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                                                 modifier = Modifier.size(20.dp),
                                             )
@@ -1334,10 +1334,10 @@ private fun ModelNameWithActiveBadge(name: String, showActiveBadge: Boolean) {
                 fontSize = 9.sp,
                 lineHeight = 11.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFF34C759),
+                color = IosAccents.Green,
                 modifier = Modifier
                     .background(
-                        Color(0xFF34C759).copy(alpha = 0.1f),
+                        IosAccents.Green.copy(alpha = 0.1f),
                         RoundedCornerShape(50),
                     )
                     .padding(horizontal = 5.dp, vertical = 1.dp),
@@ -1366,26 +1366,12 @@ private fun QuickTestButton(onClick: () -> Unit) {
         Icon(
             Icons.Default.Bolt,
             contentDescription = stringResource(R.string.model_picker_quick_test),
-            tint = Color(0xFF007AFF),
+            tint = IosAccents.Blue,
             modifier = Modifier.size(17.dp),
         )
     }
 }
 
-// iOS: provider color dot helper
-private fun providerDotColor(providerType: ProviderType?): Color = when (providerType) {
-    ProviderType.anthropic -> Color(0xFFAB47BC) // purple
-    ProviderType.gemini -> Color(0xFF42A5F5)    // blue
-    ProviderType.openAI -> Color(0xFF4CAF50)    // green
-    ProviderType.openRouter -> Color(0xFF00BCD4) // cyan
-    ProviderType.xAI -> Color(0xFFFF7043)        // orange — Grok brand
-    ProviderType.kimiCode -> Color(0xFF5C6BC0)   // indigo — Kimi accent
-    ProviderType.githubCopilot -> Color(0xFF6E5494) // purple — GitHub accent
-    // [T-android-provider-type-parity] Responses API instances are
-    // OpenAI under the hood — same green dot. Undrivable types share
-    // the neutral gray used for "no provider".
-    ProviderType.openAIResponses -> Color(0xFF4CAF50)
-    ProviderType.antigravity,
-    ProviderType.unsupported -> Color(0xFF8E8E93)
-    null -> Color(0xFF8E8E93)                    // gray
-}
+// iOS: provider color dot helper now lives in ui/components/ModelEntryPicker.kt
+// as the single public `providerDotColor`, so the dot color cannot drift between
+// this sheet and the other pickers.

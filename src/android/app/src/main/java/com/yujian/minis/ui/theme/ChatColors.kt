@@ -56,6 +56,16 @@ data class ChatPalette(
     val sheetHeaderBg: Color,
     val sheetHeaderBorder: Color,
     val fabAccent: Color,
+    // Tool / helper block card surfaces — the iOS `Color(white:)` stack:
+    //   dark  body white:0.10 (#1A1A1A) / header white:0.13 (#212121) / border white:0.25 (#404040)
+    //   light body white:0.94 (#F0F0F0) / header white:0.92 (#EBEBEB) / border white:0.82 (#D1D1D1)
+    // These ARE appearance-dependent, so unlike [IosAccents] they resolve per
+    // theme. They were previously re-typed as `if (isDark) Color(0x…) else
+    // Color(0x…)` at three sites in two files, which is exactly the shape this
+    // palette exists to collapse.
+    val toolCardBg: Color,
+    val toolCardHeaderBg: Color,
+    val toolCardBorder: Color,
 )
 
 val LightChatPalette = ChatPalette(
@@ -93,6 +103,9 @@ val LightChatPalette = ChatPalette(
     sheetHeaderBg = Color(0xFFFFFFFF),
     sheetHeaderBorder = Color(0x1A000000),
     fabAccent = Color(0xFFB7AF96),
+    toolCardBg = Color(0xFFF0F0F0),
+    toolCardHeaderBg = Color(0xFFEBEBEB),
+    toolCardBorder = Color(0xFFD1D1D1),
 )
 
 // T153: Android-specific dark palette tweaks. iOS borrows the system
@@ -151,6 +164,9 @@ val DarkChatPalette = ChatPalette(
     sheetHeaderBg = Color(0xFF2C2C2E),
     sheetHeaderBorder = Color(0x33FFFFFF),
     fabAccent = Color(0xFF504C42),
+    toolCardBg = Color(0xFF1A1A1A),
+    toolCardHeaderBg = Color(0xFF212121),
+    toolCardBorder = Color(0xFF404040),
 )
 
 val LocalChatPalette = compositionLocalOf { LightChatPalette }

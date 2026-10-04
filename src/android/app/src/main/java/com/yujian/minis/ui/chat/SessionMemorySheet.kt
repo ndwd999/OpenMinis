@@ -507,7 +507,11 @@ private fun buildAutoInjectedItems(context: Context, memoryRepository: MemoryRep
         if (content.isNotBlank()) {
             val lineCount = content.lines().size
             val injected = minOf(lineCount, 200)
-            val detail = if (lineCount > 200) "$injected/$lineCount lines injected" else "$lineCount lines (full)"
+            val detail = if (lineCount > 200) {
+                context.getString(R.string.memory_auto_injected_lines, injected, lineCount)
+            } else {
+                context.getString(R.string.memory_auto_lines_full, lineCount)
+            }
             items.add(AutoItem(
                 name = "$label — $fileName",
                 detail = detail,

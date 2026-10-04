@@ -188,7 +188,7 @@ fun BrowserSheet(
                         val title = tab.manager.pageTitle.collectAsState().value
                         val domain = tab.manager.currentURL.collectAsState().value
                             .let { url -> try { java.net.URI(url).host } catch (_: Exception) { null } }
-                        val displayTitle = title.ifEmpty { domain ?: "Tab ${tab.id}" }
+                        val displayTitle = title.ifEmpty { domain ?: stringResource(R.string.browser_tab_fallback, tab.id) }
                             .take(20)
                         val isSelected = tab.id == selectedTabId
 

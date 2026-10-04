@@ -111,14 +111,14 @@ fun ProviderListScreen(
                 if (jsonStr != null) {
                     val label = providerRepository.importInstanceJSON(jsonStr)
                     if (label != null) {
-                        Toast.makeText(context, "Imported provider \"$label\"", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.provider_list_import_success, label), Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(context, "Invalid provider configuration file", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.provider_list_import_invalid_file), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         } catch (e: Exception) {
-            Toast.makeText(context, "Failed to read file", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.provider_list_import_read_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -431,7 +431,7 @@ private fun ProviderInstanceRow(
                     // say so instead of the alarming "No API key".
                     text = if (!apiKey.isNullOrBlank()) maskKey(apiKey)
                         else if (instance.allowsEmptyAPIKey) stringResource(R.string.provider_no_key_required)
-                        else "No API key",
+                        else stringResource(R.string.provider_list_no_api_key),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
