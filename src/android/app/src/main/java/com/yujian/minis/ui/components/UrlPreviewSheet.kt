@@ -1,0 +1,31 @@
+package com.yujian.minis.ui.components
+
+import androidx.compose.runtime.Composable
+import com.yujian.minis.ui.preview.WebPreviewBottomSheet
+import com.yujian.minis.ui.preview.rememberWebViewHolder
+
+/**
+ * Bottom-sheet web preview for a URL tapped inside chat markdown.
+ *
+ * Thin wrapper around [WebPreviewBottomSheet]: callers that don't manage
+ * their own [com.yujian.minis.ui.preview.WebViewHolder] (most chat-side
+ * link taps) get the same toolbar / sheet UX as the in-chat HTML preview
+ * by going through this helper.
+ *
+ * Fullscreen expand is intentionally not exposed here — chat URL preview
+ * was a single-sheet flow on iOS too.
+ */
+@Composable
+fun UrlPreviewSheet(
+    url: String,
+    onDismiss: () -> Unit,
+) {
+    val holder = rememberWebViewHolder(url)
+    WebPreviewBottomSheet(
+        holder = holder,
+        onDismiss = {
+            holder.destroy()
+            onDismiss()
+        },
+    )
+}
