@@ -32,6 +32,7 @@ import com.yujian.minis.ui.components.SectionTextField
 import com.yujian.minis.R
 import com.yujian.minis.ui.components.MinisButton
 import com.yujian.minis.ui.components.MinisTextButton
+import com.yujian.minis.ui.components.MinisAlertDialog
 
 /**
  * Detail / edit screen for a single ModelEntry. T210: brought to iOS
@@ -75,7 +76,9 @@ fun ModelEntryDetailScreen(
     // only thing that distinguishes a deliberate choice from an untouched
     // default on a control with no empty state. See the save block below.
     var thinkingTouched by remember { mutableStateOf(false) }
-    var isHidden by remember { mutableStateOf(entry.isHidden) }
+    // [T-android-model-hide-to-delete] The Visibility switch is gone; deleting
+    // is confirmed instead of toggled.
+    var showDeleteDialog by remember { mutableStateOf(false) }
     var showQuickTest by remember { mutableStateOf(false) }
 
     // Modality state — derive from override-or-base so the toggles reflect
@@ -169,9 +172,9 @@ fun ModelEntryDetailScreen(
                         outputModalitiesTouched = outputModalitiesTouched,
                     )
                     val updated = if (entry.isCustom) {
-                        entry.copy(baseModel = baseModel.copy(id = modelId), overrides = newOverrides, isHidden = isHidden)
+                        entry.copy(baseModel = baseModel.copy(id = modelId), overrides = newOverrides)
                     } else {
-                        entry.copy(overrides = newOverrides, isHidden = isHidden)
+                        entry.copy(overrides = newOverrides)
                     }
                     providerRepository.updateEntry(updated)
                     onBack()
@@ -257,16 +260,29 @@ fun ModelEntryDetailScreen(
             )
         }
 
-        // ── Visibility ──────────────────────────────────────────────────
+        // ── Delete ──────────────────────────────────────────────────────
+        // [T-android-model-hide-to-delete] This section used to be a Visibility
+        // switch pair (Hidden) whose only effect was to keep a row in the list
+        // while greying it out — a "remove from the picker" gesture that never
+        // removed anything, and left the model occupying a row the user was
+        // trying to clear. Delete is the action people actually mean, so the
+        // section now offers that, and removeEntry cascades the group and
+        // agent-loop pins exactly as the list's own delete does.
+        //
+        // isHidden itself is untouched in the data layer: the synthesized
+        // SystemVoiceEntries (ASR online/offline, TTS) carry isHidden = true to
+        // stay out of the ordinary pickers, and it is not a user-facing concept
+        // at all. Only the user-facing affordance moved.
         SettingsSection(
-            header = stringResource(R.string.model_entry_visibility),
-            footer = stringResource(R.string.model_entry_hidden_models_won_t_appear_in_the_model_),
+            header = stringResource(R.string.model_entry_danger_zone),
+            footer = stringResource(R.string.model_entry_delete_footer),
         ) {
-            SettingsSwitchRow(
-                title = stringResource(R.string.model_entry_hidden),
-                checked = isHidden,
-                onCheckedChange = { isHidden = it },
+            SettingsRow(
+                title = stringResource(R.string.provider_detail_delete_model),
+                titleColor = MaterialTheme.colorScheme.error,
+                showChevron = false,
                 showDivider = false,
+                onClick = { showDeleteDialog = true },
             )
         }
 
@@ -340,7 +356,7 @@ fun ModelEntryDetailScreen(
                     showChevron = false,
                     showDivider = false,
                     onClick = {
-                        providerRepository.updateEntry(entry.copy(overrides = ModelOverrides(), isHidden = false))
+                        providerRepository.updateEntry(entry.copy(overrides = ModelOverrides()))
                         onBack()
                     },
                 )
@@ -348,6 +364,24 @@ fun ModelEntryDetailScreen(
         }
 
         Spacer(Modifier.height(20.dp))
+    }
+
+    if (showDeleteDialog) {
+        MinisAlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = stringResource(R.string.provider_detail_delete_model),
+            text = stringResource(
+                R.string.provider_detail_delete_model_confirm,
+                entry.model.displayName,
+            ),
+            confirmText = stringResource(R.string.common_delete),
+            isDestructive = true,
+            onConfirm = {
+                providerRepository.removeEntry(entry.id)
+                showDeleteDialog = false
+                onBack()
+            },
+        )
     }
 
     if (showQuickTest) {
