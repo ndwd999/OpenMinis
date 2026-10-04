@@ -1,5 +1,6 @@
 package com.yujian.minis.ui.settings
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,7 +56,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
-import android.widget.Toast
 import com.yujian.minis.data.model.ProviderType
 import com.yujian.minis.data.repository.ProviderRepository
 import com.yujian.minis.logging.AppLogger
@@ -139,9 +139,10 @@ fun ProviderDetailScreen(
     // dismiss would race with recomposition.
     var clearUnavailableResult by remember { mutableStateOf<String?>(null) }
 
+    // Named `exportContext` for the export action that has always used it, but
+    // it is a plain Context — the prune confirmation reads strings off it too
+    // (see the `getString` in its onConfirm, which is not a @Composable scope).
     val exportContext = androidx.compose.ui.platform.LocalContext.current
-    // Reached from a LaunchedEffect below, which is not a @Composable scope.
-    val context = exportContext
 
     SettingsScaffold(
         title = instance.label,
@@ -809,7 +810,10 @@ fun ProviderDetailScreen(
                 // can differ if a refresh lands between render and tap, and the
                 // number that actually left the database is the honest one.
                 clearUnavailableResult = if (removed > 0) {
-                    getString(R.string.provider_detail_clear_unavailable_models_done, removed)
+                    exportContext.getString(
+                        R.string.provider_detail_clear_unavailable_models_done,
+                        removed,
+                    )
                 } else {
                     null
                 }
@@ -823,7 +827,7 @@ fun ProviderDetailScreen(
 
     clearUnavailableResult?.let { message ->
         LaunchedEffect(message) {
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(exportContext, message, Toast.LENGTH_SHORT).show()
             clearUnavailableResult = null
         }
     }
