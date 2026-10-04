@@ -37,7 +37,6 @@ class AnthropicProvider(
     private val apiKey: String,
     override var model: LLMModel = LLMModel.claudeHaiku45,
     private val basePath: String = "https://api.anthropic.com",
-    /** Whether this provider uses OAuth credentials (Bearer + beta header). */
     /**
      * [T-provider-custom-user-agent] Per-provider User-Agent override.
      * null/blank → default UA; non-blank → replaces User-Agent on the chat

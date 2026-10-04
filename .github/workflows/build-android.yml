@@ -209,11 +209,21 @@ jobs:
       # green, because neither source set is ever built. That is how the
       # missing absent_since column survived a suite of passing tests: the
       # tests were correct and simply never ran here.
-      #
+      - name: Check test sources for dangling constructor arguments
+        run: python3 scripts/check_test_ctor_args.py
+
+      # Compiling the whole test source set, not just the two classes run
+      # below, and doing it BEFORE the tests: a test file that no longer
+      # compiles fails this step with the file and line, where a `--tests`
+      # filter would instead fail with "No tests found for given includes" and
+      # send the reader looking in the wrong place.
+      - name: Compile unit tests
+        working-directory: src/android
+        run: ./gradlew :app:compileDebugUnitTestKotlin --stacktrace
+
       # Targeted rather than `--tests 'ModelAbsence*'`: a pattern that matches
-      # nothing fails the build with "No tests found for given includes", which
-      # reads as a test failure instead of a typo. Naming both classes makes a
-      # rename break loudly at the right place.
+      # nothing fails the build the same way an empty compile would, and naming
+      # both classes makes a rename break loudly at the right place.
       - name: Run model-absence tests
         working-directory: src/android
         run: |
@@ -222,7 +232,7 @@ jobs:
             --tests 'com.yujian.minis.data.repository.ModelAbsencePersistenceRoundTripTest'
 
       # The whole suite has never run in CI, so it is reported rather than
-      # enforced: a pre-existing failure somewhere in the other 370 files must
+      # enforced: a pre-existing failure somewhere in the other ~370 files must
       # not mask a regression in the change under review. Flip this to a
       # blocking step once the suite is known green.
       - name: Run full unit test suite (non-blocking)
