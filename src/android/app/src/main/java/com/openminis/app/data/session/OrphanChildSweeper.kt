@@ -26,7 +26,7 @@ object OrphanChildSweeper {
      * Rows touched more recently than this are never candidates.
      *
      * Two things hide behind that. The obvious one is a run in flight. The
-     * subtler one is a backup restore: BackupImporter streams sessions row by
+     * subtler one is a bulk restore: the importer streams sessions row by
      * row rather than in one transaction, so there is a window where a child is
      * present and its parent is not yet — and because the importer preserves
      * the backup's own `updatedAt`, such a child can already be older than any

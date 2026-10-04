@@ -79,7 +79,6 @@ fun SettingsScreen(
     onProvidersClick: () -> Unit,
     onModelGroupsClick: () -> Unit,
     onRootfsClick: () -> Unit = {},
-    onBackupClick: () -> Unit = {},
     onEnvVarsClick: () -> Unit = {},
     onSkillsClick: () -> Unit = {},
     onTerminalClick: () -> Unit = {},
@@ -269,13 +268,8 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_mount_external_folders),
                     subtitle = stringResource(R.string.settings_mount_external_folders_subtitle),
                     onClick = onMountedFoldersClick,
-                )
-                SettingsItem(
-                    icon = Icons.Outlined.Backup,
-                    iconColor = Color(0xFF34C759),
-                    title = stringResource(R.string.settings_backup_restore),
-                    subtitle = stringResource(R.string.settings_backup_restore_subtitle),
-                    onClick = onBackupClick,
+                    // Last row in this section since the Backup & Restore entry
+                    // was removed; keeps the trailing divider from dangling.
                     showDivider = false,
                 )
             }

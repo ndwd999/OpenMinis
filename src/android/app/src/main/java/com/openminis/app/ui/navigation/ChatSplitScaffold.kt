@@ -874,10 +874,6 @@ fun ChatSplitScaffoldRoute(
                 onSettingsClick = { navController.safeNavigate(Routes.SETTINGS) },
                 onAddProviderClick = { navController.safeNavigate(Routes.ADD_PROVIDER) },
                 onSelectModelsClick = { navController.safeNavigate(Routes.ONBOARDING_MODELS) },
-                onRestoreBackupClick = {
-                    navController.currentBackStackEntry?.savedStateHandle?.set(Routes.BACKUP_INITIAL_TAB_KEY, 1)
-                    navController.safeNavigate(Routes.BACKUP)
-                },
                 onTerminalClick = { navController.safeNavigate(Routes.terminal()) },
                 onRootfsClick = { navController.safeNavigate(Routes.ROOTFS_MANAGEMENT) },
                 onScheduledTasksClick = { navController.safeNavigate(Routes.SCHEDULED_TASKS) },

@@ -1065,7 +1065,7 @@ class ChatRepository(internal val dao: ChatDao) {
         }
 
         // `internal` so the restore path can rebuild a session's preview from the
-        // messages it just imported — see BackupImporter [T-android-restore-preview].
+        // messages it just imported (a bulk-import path, since removed).
         internal fun extractTextPreview(partsJson: String): String? {
             try {
                 val array = org.json.JSONArray(partsJson)

@@ -163,55 +163,6 @@ object DebugMethodRegistry {
             returns = "{size, content, encoding, bytesRead, truncated?}",
             example = ex("path" to "/etc/os-release", "limit" to 4096),
         ),
-        // [T-android-backup-subagents]
-        MethodSpec(
-            name = "debug.backup.export",
-            description = "Run the real BackupExporter into filesDir/debug-backup (no destination upload). Credentials excluded unless includeCredentials=true.",
-            params = listOf(
-                ParamSpec("categories", "array", required = false, description = "Category keys, default [\"providers\"]."),
-                ParamSpec("includeCredentials", "boolean", required = false, description = "Default false."),
-            ),
-            returns = "{path, bytes, backupId, members:[...]}",
-            example = JSONObject().put("categories", org.json.JSONArray().put("providers")),
-        ),
-        MethodSpec(
-            name = "debug.backup.restore",
-            description = "Extract a .minisbak on the device and run the real BackupImporter (merge; nothing deleted).",
-            params = listOf(
-                ParamSpec("path", "string", required = true, description = "Absolute path of the package on the device."),
-                ParamSpec("categories", "array", required = false, description = "Category keys; default = all in the package."),
-            ),
-            returns = "{backupId, sourcePlatform, integrityChecked, integrityFailed, warnings, categories:[{category, imported, updated, skipped, unreadable, failed}]}",
-            example = JSONObject().put("path", "/data/user/0/com.openminis.app/files/debug-backup/x.minisbak"),
-        ),
-        MethodSpec(
-            name = "debug.backup.upload",
-            description = "Upload a package to ONE named destination with the real RcloneChunkedUpload. cancelAfterMs simulates Stop.",
-            params = listOf(
-                ParamSpec("path", "string", required = true, description = "Package on the device."),
-                ParamSpec("remote", "string", required = true, description = "Destination name."),
-                ParamSpec("cancelAfterMs", "integer", required = false, description = "Flip the cancel flag after this long."),
-            ),
-            returns = "{ok, elapsedMs, cancelRequested, error}",
-            example = JSONObject().put("path", "...").put("remote", "SlowDavTest"),
-        ),
-        MethodSpec(
-            name = "debug.backup.remotes.addWebdav",
-            description = "Add a WebDAV destination, DISABLED so real backups never deliver to it.",
-            params = listOf(
-                ParamSpec("name", "string", required = true, description = "Destination name."),
-                ParamSpec("url", "string", required = true, description = "WebDAV URL."),
-            ),
-            returns = "{added, enabled:false}",
-            example = JSONObject().put("name", "SlowDavTest").put("url", "http://127.0.0.1:8099"),
-        ),
-        MethodSpec(
-            name = "debug.backup.remotes.remove",
-            description = "Remove a destination and its stored credential.",
-            params = listOf(ParamSpec("name", "string", required = true, description = "Destination name.")),
-            returns = "{removed}",
-            example = JSONObject().put("name", "SlowDavTest"),
-        ),
         MethodSpec(
             name = "debug.subAgents.list",
             description = "List the sub agent roster (built-in + custom).",

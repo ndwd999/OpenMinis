@@ -159,8 +159,7 @@ class SkillScanParityTest {
         assertTrue(chatVm.contains("skillRepository?.requestReload(\"file_write\", force = true)"))
     }
 
-    @Test fun `restore and returning to the app queue a rescan`() {
-        assertTrue(ProductionSources.read("backup/BackupImporter.kt").contains("requestReload(\"backup_restore\", force = true)"))
+    @Test fun `returning to the app queues a rescan`() {
         assertTrue(ProductionSources.read("MinisApp.kt").contains("skillRepository.requestReload(\"foreground\")"))
     }
 

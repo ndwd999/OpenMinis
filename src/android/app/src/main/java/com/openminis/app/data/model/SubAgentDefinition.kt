@@ -82,7 +82,7 @@ data class SubAgentDefinition(
     /**
      * [T-android-provider-iso8601-wire] Epoch millis in memory, but
      * serialized as an ISO-8601 string on the wire (see
-     * [com.openminis.app.backup.Iso8601MillisSerializer]). iOS
+     * [com.openminis.app.data.serialization.Iso8601MillisSerializer]). iOS
      * `SubAgentDefinition.updatedAt` is a `Date`, encoded with
      * `.iso8601` in the backup exporter — a bare Long here made a restore
      * of an iOS-produced provider_config.json fail JSON decoding entirely
@@ -91,7 +91,7 @@ data class SubAgentDefinition(
      * imported=0. The serializer still accepts a legacy plain numeric epoch
      * for old Android-written packages.
      */
-    @kotlinx.serialization.Serializable(with = com.openminis.app.backup.Iso8601MillisSerializer::class)
+    @kotlinx.serialization.Serializable(with = com.openminis.app.data.serialization.Iso8601MillisSerializer::class)
     var updatedAt: Long = System.currentTimeMillis(),
 ) {
     /**
@@ -277,61 +277,3 @@ object SubAgentRoster {
         return roster.firstOrNull { nameKey(it.name) == raw }
     }
 
-    /**
-     * The comparison form of a name: trimmed, case-folded and diacritic-folded.
-     *
-     * The name comes back from a MODEL, which may not reproduce accents exactly,
-     * and the stored side is user-typed and may carry stray whitespace. Folding
-     * both is what stops a roster entry named " Résumé-agent " from resolving on
-     * one platform and failing with `unknown_agent` on the other. Matches iOS
-     * SubAgentDefinition.nameKey.
-     */
-    fun nameKey(s: String): String =
-        java.text.Normalizer.normalize(s.trim(), java.text.Normalizer.Form.NFD)
-            .replace(COMBINING_MARKS, "")
-            .lowercase()
-
-    /** Hoisted: the merge path calls [nameKey] O(local × remote) times. */
-    private val COMBINING_MARKS = Regex("\\p{Mn}+")
-
-    /** Outcome of [mergeBackup]: the roster to save plus the report counts. */
-    data class BackupMerge(val roster: List<SubAgentDefinition>, val written: Int, val skipped: Int)
-
-    /**
-     * [T-android-backup-subagents] Fold a backup package's custom sub agents
-     * into the local roster, with iOS's restore rules
-     * (BackupImporter+Categories importSubAgents -> SubAgentRoster.merge):
-     *  - an id not known locally is added, unless its NAME matches a local
-     *    agent: the model picks agents by name, so two entries it cannot tell
-     *    apart would make one unreachable; the local one stays;
-     *  - a known id is replaced only when the package's copy is newer, so
-     *    restoring an old package cannot roll back an agent edited since;
-     *  - the built-in is never touched, and nothing is deleted.
-     * The result is normalized (count bound, dense sortOrder).
-     */
-    fun mergeBackup(
-        local: List<SubAgentDefinition>,
-        incoming: List<SubAgentDefinition>,
-        log: ((String) -> Unit)? = null,
-    ): BackupMerge {
-        val out = local.toMutableList()
-        var written = 0
-        var skipped = 0
-        for (r in incoming) {
-            if (r.isBuiltIn || r.id == SubAgentDefinition.BUILT_IN_ID) { skipped++; continue }
-            val at = out.indexOfFirst { it.id == r.id }
-            if (at >= 0) {
-                if (r.updatedAt > out[at].updatedAt) { out[at] = r.copy(isBuiltIn = false); written++ } else skipped++
-                continue
-            }
-            if (out.any { nameKey(it.name) == nameKey(r.name) }) {
-                log?.invoke("backup sub agent '${r.name}' skipped: a local agent already has that name")
-                skipped++
-                continue
-            }
-            out.add(r.copy(isBuiltIn = false))
-            written++
-        }
-        return BackupMerge(normalize(out, log), written, skipped)
-    }
-}

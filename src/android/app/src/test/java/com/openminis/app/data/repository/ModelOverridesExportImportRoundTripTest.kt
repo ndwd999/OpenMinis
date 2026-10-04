@@ -43,7 +43,7 @@ import org.junit.Test
  * `the ported wire format matches the source` greps the production file for
  * every key so the port cannot drift away from what actually ships.
  *
- * The backup path is deliberately contrasted: `BackupExporter.exportProviders`
+ * The (since-removed) backup exporter is deliberately contrasted: it called
  * serializes the whole `ProviderConfig` through kotlinx, so it carries any field
  * the data class has, including ones this hand-written path forgets. That
  * asymmetry is what the KNOWN GAP at the bottom is about.

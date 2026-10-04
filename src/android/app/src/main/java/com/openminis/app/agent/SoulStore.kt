@@ -234,7 +234,7 @@ object SoulStore {
      *
      * Two objections were recorded against this when the inline form was
      * chosen, and both have since been checked and do not hold:
-     *   - Backup: `BackupExporter.exportMemory` walks the memory directory and
+     *   - (a former backup exporter walked the memory directory and
      *     copies every file it finds, so a sibling PNG IS backed up.
      *   - Sync: Android has no SOUL sync path at all (SoulV2 is iOS/iCloud).
      */

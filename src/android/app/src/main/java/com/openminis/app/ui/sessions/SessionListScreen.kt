@@ -506,7 +506,6 @@ fun SessionListScreen(
     onSettingsClick: () -> Unit,
     onAddProviderClick: () -> Unit = {},
     onSelectModelsClick: () -> Unit = {},
-    onRestoreBackupClick: () -> Unit = {},
     onTerminalClick: () -> Unit = {},
     onRootfsClick: () -> Unit = {},
     // [T-android-scheduled-tasks-design] Entry to the scheduled-tasks list.
@@ -999,7 +998,6 @@ fun SessionListScreen(
                             hasGroups = hasGroups,
                             onAddProvider = onAddProviderClick,
                             onSelectModels = onSelectModelsClick,
-                            onRestoreBackup = onRestoreBackupClick,
                             onStartConversation = {
                                 scope.launch {
                                     val sessionId = viewModel.createNewSession()
@@ -3169,7 +3167,6 @@ private fun OnboardingLanding(
     onAddProvider: () -> Unit,
     onSelectModels: () -> Unit,
     onStartConversation: () -> Unit,
-    onRestoreBackup: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -3248,35 +3245,6 @@ private fun OnboardingLanding(
             )
         }
 
-        // [T-onboarding-restore-link] A side route for someone moving from
-        // another device (iOS parity: ContentView.emptyState). A footnote link,
-        // not a fourth card, so it does not compete with the three steps.
-        // Shown only until models are selected — after that this landing also
-        // greets returning users with no chats, whose path is Settings →
-        // Backup & Restore. Restore merges, so it is safe after step 1 too.
-        if (!hasGroups) {
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onRestoreBackup)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.History,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = stringResource(R.string.sessionlist_welcome_restore_backup),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
     }
 }
 

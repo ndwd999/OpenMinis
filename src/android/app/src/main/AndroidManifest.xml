@@ -20,11 +20,6 @@
          policy, not an OS runtime check, and Minis ships as a sideload.
     -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <!-- [T-android-backup-fgs] BackupForegroundService is a dataSync service:
-         required on Android 14+ to call startForeground with that type. Unlike
-         the agent service (moved to mediaPlayback over the 6h/24h cap), a
-         backup is finite, and the service handles onTimeout by stopping. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <!-- T50: PARTIAL_WAKE_LOCK held by AgentForegroundService while sessions
          are streaming so Doze + OEM CPU throttling don't stall long shell
          tools after screen-off. -->
@@ -483,14 +478,6 @@
             android:name=".service.AgentForegroundService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
-
-        <!-- [T-android-backup-fgs] Keeps a running backup alive in the
-             background (progress notification + wake lock). Started by
-             BackupRunController, stops itself when the run ends. -->
-        <service
-            android:name=".service.BackupForegroundService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
 
         <!-- Alarm broadcast receiver (also handles BOOT_COMPLETED and
              MY_PACKAGE_REPLACED for re-scheduling). [T-android-alarm-reschedule-on-restart]

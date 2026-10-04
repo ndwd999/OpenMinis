@@ -165,14 +165,11 @@ class DirectorySizeSymlinkTest {
         // Counting bytes ACTUALLY COPIED OR WRITTEN is a different question from
         // "how much does this directory occupy": there, resolving a symlink is
         // correct, because the copy really does duplicate the target's bytes.
-        // The backup writers are that case and are deliberately exempt — the
-        // exemption is by path and is listed here so it stays a decision rather
-        // than a hole the heuristic quietly grew.
-        val bytesWrittenNotBytesOnDisk = setOf(
-            "backup/BackupZip.kt",        // pre-flight check against the ZIP format's 4GB limit
-            "backup/BackupExporter.kt",   // progress counter over files it just copied
-            "backup/BackupImporter.kt",   // progress counter over files it just wrote
-        )
+        // The backup writers were that case and used to be exempt here. That
+        // feature is gone, so the list is empty: any future writer that
+        // recurses with a byte counter must be added deliberately rather than
+        // inheriting a silent hole from this heuristic.
+        val bytesWrittenNotBytesOnDisk = emptySet<String>()
 
         val offenders = mutableListOf<String>()
         for (f in mainSources()) {
