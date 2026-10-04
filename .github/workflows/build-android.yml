@@ -31,9 +31,9 @@ jobs:
       - name: Checkout with submodules
         uses: actions/checkout@v4
         with:
-          # deps/ish 与 deps/proot 是子模块，指向公开的 OpenMinis/* 仓库。
-          # 缺这一步原生构建会在链接阶段报 undefined symbol。
-          submodules: recursive
+          # 只取 deps/proot：deps/ish 是 iOS 沙箱内核，本工作流构建 Android。
+          submodules: |
+            deps/proot
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -60,40 +60,35 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build pkg-config
-          # Go 1.25+ 用于 gomobile 绑定 rclone
-          sudo apt-get install -y golang-go
-          go version
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0" "cmake;3.22.1"
+          # NDK r28+ 是硬性要求（build.gradle.kts 依赖 r28 工具链）
+          sdkmanager "ndk;28.0.13004108"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.0.13004108" >> "$GITHUB_ENV"
+          echo "NDK: $ANDROID_SDK_ROOT/ndk/28.0.13004108"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          # ubuntu-24.04 自带的 apt golang 是 1.22，而 golang.org/x/mobile
+          # 要求 go >= 1.26.0。setup-go 装官方发行版，避免 apt 的旧版本。
+          go-version: "1.26.x"
+          cache: false
 
       - name: Set up gomobile
         run: |
           go install golang.org/x/mobile/cmd/gomobile@latest
           go install golang.org/x/mobile/cmd/gobind@latest
-          $(go env GOPATH)/bin/gomobile init
-          # gomobile 安装在 $GOPATH/bin，runner 的默认 PATH 不含该目录。
-          # 后续 build_rclone_android.sh 会直接调用 `gomobile`，故必须导出。
-          echo "GOPATH_BIN=$(go env GOPATH)/bin" >> "$GITHUB_ENV"
+          "$(go env GOPATH)/bin/gomobile" init
+          # gomobile 装在 $GOPATH/bin，不在 runner 默认 PATH 上；
+          # 后续 build_rclone_android.sh 直接调用 `gomobile`，故必须导出。
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
           "$(go env GOPATH)/bin/gomobile" version
-
-      - name: Install Android SDK components
-        run: |
-          # ubuntu-latest runner 预装了 Android SDK，但 sdkmanager 不在默认
-          # PATH 上，必须显式使用 ANDROID_HOME 下的 cmdline-tools 路径。
-          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER="$(ls -d "${ANDROID_SDK_ROOT:-$ANDROID_HOME}"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -1)"
-          fi
-          if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
-            echo "::error::sdkmanager not found under ${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools"
-            exit 1
-          fi
-          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;35.0.0" "cmake;3.22.1"
-          # NDK r28+ 是硬性要求（build.gradle.kts 依赖 r28 的工具链）
-          "$SDKMANAGER" "ndk;28.0.13004108"
-          # 记录实际安装的 NDK 版本，供后续 proot 构建步骤使用
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.0.13004108" >> "$GITHUB_ENV"
-          echo "NDK installed at: $ANDROID_SDK_ROOT/ndk/28.0.13004108"
 
       - name: Build PRoot (native)
         run: ./deps/build_proot.sh
