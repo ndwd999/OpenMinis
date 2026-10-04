@@ -36,4 +36,16 @@ data class ProviderModelEntryEntity(
     @ColumnInfo(name = "is_hidden") val isHidden: Int = 0,
     @ColumnInfo(name = "sort_order") val sortOrder: Int = 0,
     @ColumnInfo(name = "user_modified_at") val userModifiedAt: Long? = null,
+    /**
+     * [T-android-model-absence-grace-persist] Epoch millis since the provider
+     * stopped listing this model, or null while it is listed. Backs the
+     * [com.yujian.minis.data.repository.ProviderRepository.MODEL_ABSENCE_GRACE_MS]
+     * window in replaceEntries: an entry that stays absent past the window is
+     * pruned. Nullable with no DEFAULT on purpose — null means "listed", so a
+     * DEFAULT 0 would read as "absent since 1970" and delete good models.
+     *
+     * The column was missing from the first Room port, so the mark was
+     * recomputed on every cold start and the window could never elapse.
+     */
+    @ColumnInfo(name = "absent_since") val absentSince: Long? = null,
 )

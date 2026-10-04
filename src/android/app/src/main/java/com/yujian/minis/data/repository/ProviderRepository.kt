@@ -1399,6 +1399,66 @@ class ProviderRepository(private val context: Context) {
         markInstanceFetched(instanceId)
     }
 
+    /**
+     * [T-android-model-absence-manual-prune] Delete every catalog entry of this
+     * instance that the provider is not currently listing — the explicit
+     * counterpart to the automatic [MODEL_ABSENCE_GRACE_MS] window.
+     *
+     * The window exists because a relay can drop a model from /v1/models for a
+     * few minutes and list it again, and deleting on the spot would take the
+     * user's overrides with it (see the replaceEntries comment). A user who can
+     * see the "unavailable" marks and knows the models are genuinely gone
+     * should not have to wait out the window, so the settings screen offers
+     * this. It is the same deletion the window would eventually perform, just
+     * on request — and it makes the data loss explicit by being a tap the user
+     * confirms, rather than a silent side effect of a refresh.
+     *
+     * Custom entries are never touched: they were added by hand and their
+     * absence from /v1/models says nothing about whether the user still wants
+     * them. This mirrors replaceEntries, which only ever guards catalog rows.
+     *
+     * [T-android-model-absence-prune-now-ms] `nowMs` is a parameter rather than
+     * a System.currentTimeMillis() call so a unit test can push the clock past
+     * [MODEL_ABSENCE_GRACE_MS] and assert that an entry the *previous* pass
+     * marked absent is actually pruned on this one. Hard-coding the clock here
+     * is exactly what let the missing `absent_since` column hide: the old
+     * grace test restated the rule by hand instead of exercising this path.
+     *
+     * @return how many entries were removed, for the caller's confirmation toast.
+     */
+    fun clearUnavailableEntries(
+        instanceId: String,
+        nowMs: Long = System.currentTimeMillis(),
+    ): Int = synchronized(configLock) {
+        ensureConfigLoaded()
+        val config = workingCopy()
+        val doomed = config.modelEntries.filter {
+            it.providerInstanceId == instanceId &&
+                !it.isCustom &&
+                it.absentSince?.let { since -> nowMs - since > MODEL_ABSENCE_GRACE_MS } == true
+        }
+        if (doomed.isEmpty()) return@synchronized 0
+
+        val doomedIds = doomed.map { it.id }.toSet()
+        config.modelEntries.removeAll { it.id in doomedIds }
+
+        // Same cascade replaceEntries does for entries it deletes: drop the
+        // now-dangling group members and agent-loop pins. removeEntry does the
+        // identical fix-up for a single deletion; this is the bulk form.
+        config.modelGroups.forEach { group ->
+            group.memberEntryIds.removeAll { it in doomedIds }
+        }
+        config.agentLoopModelEntryIds.removeAll { it in doomedIds }
+
+        android.util.Log.i(
+            "ProviderRepo",
+            "[ModelList] clearUnavailableEntries instanceId=$instanceId removed ${doomed.size}: " +
+                doomed.map { it.baseModel.id }.take(20),
+        )
+        saveConfig(config)
+        doomed.size
+    }
+
     // --- Model Entry management ---
     //
     // [T-android-provider-mutator-lock] Every read-modify-write mutator below

@@ -40,6 +40,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +55,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import android.widget.Toast
 import com.yujian.minis.data.model.ProviderType
 import com.yujian.minis.data.repository.ProviderRepository
 import com.yujian.minis.logging.AppLogger
@@ -126,8 +128,20 @@ fun ProviderDetailScreen(
 
     val entries = providerRepository.entriesFor(instanceId)
     var isRefreshing by remember { mutableStateOf(false) }
+    // [T-android-model-absence-manual-prune] The explicit prune row shows only
+    // while there is something to prune, so an all-healthy provider never grows
+    // a destructive-looking row. Counted here rather than inline in the gate so
+    // the row label and the predicate cannot drift apart.
+    val unlistedCount = entries.count { it.isUnavailableFromProvider && !it.isCustom }
+    var showClearUnavailableDialog by remember { mutableStateOf(false) }
+    // Result toast text, held as a String so the dialog can close before the
+    // message appears — reading a mutable int in the toast and resetting it on
+    // dismiss would race with recomposition.
+    var clearUnavailableResult by remember { mutableStateOf<String?>(null) }
 
     val exportContext = androidx.compose.ui.platform.LocalContext.current
+    // Reached from a LaunchedEffect below, which is not a @Composable scope.
+    val context = exportContext
 
     SettingsScaffold(
         title = instance.label,
@@ -526,6 +540,36 @@ fun ProviderDetailScreen(
                 showDivider = entries.isNotEmpty() || true,
             )
 
+            // [T-android-model-absence-manual-prune] Explicit prune, directly
+            // under Refresh. Refresh marks entries the provider stopped listing
+            // and the repository drops them once they have been absent past
+            // MODEL_ABSENCE_GRACE_MS (7 days) — the window that keeps a relay
+            // hiccup from destroying per-model overrides. A user looking at a
+            // list of stale rows should not have to wait out seven days, so
+            // this row performs the same deletion on demand.
+            //
+            // Gated on the count rather than always shown, so the row only
+            // exists when it has work to do and can never be tapped into a
+            // no-op confirmation.
+            if (unlistedCount > 0) {
+                SettingsRow(
+                    title = stringResource(
+                        R.string.provider_detail_clear_unavailable_models,
+                        unlistedCount,
+                    ),
+                    onClick = { showClearUnavailableDialog = true },
+                    showChevron = false,
+                    trailing = {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    showDivider = entries.isNotEmpty(),
+                )
+            }
+
             entries.forEachIndexed { idx, entry ->
                 // Drive both tap and long-press from a Box wrapper so we
                 // don't have to expand SettingsRow's signature.
@@ -742,6 +786,46 @@ fun ProviderDetailScreen(
                 entryToDelete = null
             },
         )
+    }
+
+    // [T-android-model-absence-manual-prune] Confirmation before the bulk prune.
+    // Confirmed rather than immediate because the deletion takes the user's
+    // per-model overrides with it — the same reason the automatic path waits out
+    // a grace window instead of pruning on the first miss.
+    if (showClearUnavailableDialog) {
+        MinisAlertDialog(
+            onDismissRequest = { showClearUnavailableDialog = false },
+            title = stringResource(R.string.provider_detail_clear_unavailable_models_dialog_title),
+            text = stringResource(
+                R.string.provider_detail_clear_unavailable_models_dialog_text,
+                unlistedCount,
+            ),
+            confirmText = stringResource(R.string.provider_detail_clear_unavailable_models_confirm),
+            isDestructive = true,
+            onConfirm = {
+                showClearUnavailableDialog = false
+                val removed = providerRepository.clearUnavailableEntries(instance.id)
+                // Report the repository's own count, not unlistedCount: the two
+                // can differ if a refresh lands between render and tap, and the
+                // number that actually left the database is the honest one.
+                clearUnavailableResult = if (removed > 0) {
+                    getString(R.string.provider_detail_clear_unavailable_models_done, removed)
+                } else {
+                    null
+                }
+                AppLogger.info(
+                    TAG,
+                    "Cleared $removed unlisted model entr(ies) for ${instance.id}",
+                )
+            },
+        )
+    }
+
+    clearUnavailableResult?.let { message ->
+        LaunchedEffect(message) {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            clearUnavailableResult = null
+        }
     }
 }
 

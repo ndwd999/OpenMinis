@@ -2141,6 +2141,15 @@
     <string name="provider_detail_image_mode_chat">Chat</string>
     <string name="provider_detail_refresh_model_list">Refresh model list</string>
     <string name="provider_detail_refresh_model_list_progress">Refreshing…</string>
+    <!-- [T-android-model-absence-manual-prune] Labels for the explicit prune row
+         that sits under Refresh. "%1$d" is the count of entries the provider is
+         not currently listing. The dialog warns that local overrides are
+         removed, because a pruned entry takes its per-model settings with it. -->
+    <string name="provider_detail_clear_unavailable_models">Remove %1$d unlisted models</string>
+    <string name="provider_detail_clear_unavailable_models_dialog_title">Remove unlisted models?</string>
+    <string name="provider_detail_clear_unavailable_models_dialog_text">The provider no longer lists these %1$d models, so they are already hidden from pickers. Removing them also deletes any settings or custom names you gave them. Models you added by hand are kept.</string>
+    <string name="provider_detail_clear_unavailable_models_confirm">Remove</string>
+    <string name="provider_detail_clear_unavailable_models_done">Removed %1$d unlisted models</string>
     <string name="provider_list_no_api_key">No API key</string>
     <string name="provider_list_import_success">Imported provider \"%1$s\"</string>
     <string name="provider_list_import_invalid_file">Invalid provider configuration file</string>

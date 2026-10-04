@@ -31,6 +31,19 @@ import org.junit.Test
  * This reproduces the decision rule rather than driving the repository, which
  * needs Android context + SharedPreferences. The rule under test is the part
  * that changed; source-level wiring is asserted separately at the bottom.
+ *
+ * ## What this test CANNOT catch — see [ModelAbsencePersistenceRoundTripTest]
+ *
+ * Restating the rule here is why the original bug survived a green suite. The
+ * rule was correct in memory; what was broken was the database mirror, which
+ * dropped `absentSince` on every save and returned null on every load. Nothing
+ * in this file touches that path — `refresh()` below receives its `existing`
+ * list already populated, so an implementation that loses the mark between
+ * launches still passes every test here.
+ *
+ * The persistence half lives in [ModelAbsencePersistenceRoundTripTest], which
+ * drives the real `toSnapshot` / `toProviderConfig` mapping. Keep both: this
+ * one pins the decision, that one pins that the decision has a mark to read.
  */
 class ModelAbsenceGraceTest {
 

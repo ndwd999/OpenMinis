@@ -36,7 +36,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ProviderConfigMetaEntity::class,
         ProviderThinkingRuleEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class ProviderDatabase : RoomDatabase() {
@@ -105,6 +105,52 @@ abstract class ProviderDatabase : RoomDatabase() {
         }
 
 
+        /**
+         * [T-android-model-absence-grace-persist] Persist the per-entry absence
+         * mark so the 7-day grace window actually elapses across restarts.
+         *
+         * Pure additive nullable INTEGER ALTER — an O(1) metadata change in
+         * SQLite, no table rebuild and no row rewrite. Existing rows read back
+         * NULL, which is exactly right: nothing had been observed absent before
+         * this build could record it.
+         *
+         * Without the column the read path returned absentSince = null on every
+         * cold start, so replaceEntries re-stamped `nowMs` on each refresh and
+         * the window never elapsed — unlisted models were never pruned.
+         *
+         * NOT NULL DEFAULT 0 would be wrong here: 0 would mean "absent since
+         * 1970", i.e. past the window on first sight, which would delete every
+         * model a stale row mentions.
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE provider_model_entries ADD COLUMN absent_since INTEGER")
+            }
+        }
+
+        /**
+         * [T-android-model-absence-grace-persist] Downgrade 5 → 4. Deliberately
+         * a NO-OP, the same contract AppDatabase.MIGRATION_12_11 uses: the
+         * absent_since column stays in place.
+         *
+         * Registering any 5 → 4 path is enough for Room to proceed — it does not
+         * inspect what the migration does. Dropping the column instead would
+         * erase the absence marks a newer build recorded, so a user who
+         * downgrades and re-upgrades would restart every window: the very bug
+         * this column fixes. Keeping it costs 8 bytes per absent row.
+         *
+         * Room binds by column NAME, never by position, and validation only
+         * requires the columns the entity declares — extras are ignored, so an
+         * older build reads and writes this table without knowing the column
+         * exists.
+         */
+        val MIGRATION_5_4 = object : Migration(5, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Intentionally empty — the column is left in place.
+            }
+        }
+
+
         fun getInstance(context: Context): ProviderDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -112,7 +158,10 @@ abstract class ProviderDatabase : RoomDatabase() {
                     ProviderDatabase::class.java,
                     "provider.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(
+                        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
+                        MIGRATION_4_5, MIGRATION_5_4,
+                    )
                     .build()
                     .also { INSTANCE = it }
             }

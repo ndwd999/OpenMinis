@@ -1947,6 +1947,12 @@
     <string name="provider_detail_image_mode_chat">对话式</string>
     <string name="provider_detail_refresh_model_list">刷新模型列表</string>
     <string name="provider_detail_refresh_model_list_progress">正在刷新…</string>
+    <!-- [T-android-model-absence-manual-prune] 立即清理行与确认弹窗文案。 -->
+    <string name="provider_detail_clear_unavailable_models">清理 %1$d 个已下线模型</string>
+    <string name="provider_detail_clear_unavailable_models_dialog_title">清理已下线的模型？</string>
+    <string name="provider_detail_clear_unavailable_models_dialog_text">服务商已不再提供这 %1$d 个模型，它们已从模型选择列表中隐藏。清理会一并删除你为它们设置的自定义名称与参数；你手动添加的模型不受影响。</string>
+    <string name="provider_detail_clear_unavailable_models_confirm">清理</string>
+    <string name="provider_detail_clear_unavailable_models_done">已清理 %1$d 个已下线模型</string>
     <string name="provider_list_no_api_key">未配置 API 密钥</string>
     <string name="provider_list_import_success">已导入 AI 服务商「%1$s」</string>
     <string name="provider_list_import_invalid_file">AI 服务商配置文件无效</string>

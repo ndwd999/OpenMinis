@@ -130,6 +130,10 @@ fun ProviderConfig.toSnapshot(
                     isHidden = if (e.isHidden) 1 else 0,
                     sortOrder = idx,
                     userModifiedAt = e.userModifiedAt,
+                    // [T-android-model-absence-grace-persist] Carry the absence
+                    // mark to disk. Without it the field dies at every save and
+                    // the grace window restarts, so unlisted models never prune.
+                    absentSince = e.absentSince,
                 )
             )
         }
@@ -271,6 +275,11 @@ fun ProviderConfigSnapshot.toProviderConfig(jsonForBlobs: Json): ProviderConfig 
             isHidden = row.isHidden != 0,
             uuid = row.id,
             userModifiedAt = row.userModifiedAt,
+            // [T-android-model-absence-grace-persist] Read the mark back. This
+            // is the half that was missing: without it absentSince was null for
+            // every entry after a reload, so replaceEntries treated each refresh
+            // as a first sighting and the 7-day window never elapsed.
+            absentSince = row.absentSince,
         )
     }.toMutableList()
 
