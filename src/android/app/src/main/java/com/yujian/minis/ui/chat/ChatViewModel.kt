@@ -6226,16 +6226,32 @@ class ChatViewModel(
             _sessionTitle.value = session.title ?: UNTITLED_SESSION_TITLE
             _sessionCategory.value = session.category
             _memoryEnabled.value = session.memoryEnabled != 0
-            // T239: hydrate persisted thinking-mode override. null = unset
-            // (use OFF as the legacy default); non-null = explicit user
+            // [T-model-restore-thinking-level] T239: hydrate persisted
+            // thinking-mode override. null = unset; non-null = explicit user
             // choice persisted across cold-start. runCatching guards against
             // a stale enum name from a future rename — fall back silently
             // rather than crashing the session load.
             // [T-android-restore-thinking-level] A session restored from an iOS
             // backup carries the iOS raw value ("high"), which valueOf rejected
             // — the session silently came back with thinking off.
+            //
+            // A session with NO persisted level now starts ON rather than off:
+            // OFF is resolved to the bound model's own ceiling further below,
+            // once the model is known. It cannot be read here — the provider and
+            // model are still being resolved by the priorities that follow — and
+            // defaulting to a constant OFF meant every fresh session ran with no
+            // reasoning effort at all even on models that support it, so the user
+            // had to discover the thinking control before the feature was
+            // usable. A model that cannot reason resolves to OFF anyway (see
+            // catalogMaxThinkingLevel), so nothing that could not think is being
+            // asked to.
+            //
+            // OFF is a real user choice, not a placeholder: choosing it persists
+            // "OFF" and arrives here through the persisted branch, so it still
+            // wins. Only the unset case takes the new default.
             val persistedThinking = session.thinkingOverride
                 ?.let { ThinkingLevel.parseOrNull(it) }
+            var thinkingUnset = persistedThinking == null
             _thinkingLevel.value = persistedThinking ?: ThinkingLevel.OFF
 
             // Priority 1: restore from persisted model_binding (group or entry)
@@ -6316,6 +6332,33 @@ class ChatViewModel(
                 if (defaultGroupId != null) {
                     resolved = resolveProviderFromGroup(defaultGroupId)
                     if (resolved) _selectedGroupId.value = defaultGroupId
+                }
+            }
+
+            // [T-model-restore-thinking-level] Now that the model is known, turn
+            // the provisional OFF above into the model's own ceiling — but only
+            // when the session expressed no preference AND a group default did
+            // not already decide it. Written after every resolution priority so
+            // it sees the model that actually got bound, whichever path found it.
+            //
+            // `activeEntryId` rather than `currentModel` alone: the entry is the
+            // only carrier of a per-model `maxThinkingLevel` override, and a
+            // session pinned to an entry must honour it over the bare catalog
+            // ceiling. Falls back to the bound model when the session resolved
+            // through a group without landing on a specific entry.
+            if (thinkingUnset) {
+                val boundEntry = _activeEntryId.value?.let { id ->
+                    providerRepository.config.value.modelEntries.find { it.id == id }
+                }
+                val ceiling = boundEntry?.effectiveMaxThinkingLevel
+                    ?: currentModel?.catalogMaxThinkingLevel
+                if (ceiling != null && ceiling.isEnabled) {
+                    _thinkingLevel.value = ceiling
+                    AppLogger.info(
+                        TAG,
+                        "[Thinking] session ${sessionId.take(8)} had no override — " +
+                            "defaulting to the model's ceiling $ceiling",
+                    )
                 }
             }
 
