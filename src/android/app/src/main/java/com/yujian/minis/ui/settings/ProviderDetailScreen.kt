@@ -513,9 +513,12 @@ fun ProviderDetailScreen(
                         isRefreshing = true
                         scope.launch {
                             try {
-                                // forceRefresh: this is the manual Refresh tap,
-                                // which must bypass the discovery cache — a
-                                // Refresh that returns a cached list is not one.
+                                // forceRefresh is passed for intent, but it is
+                                // inert at the repository layer today: the
+                                // discovery cache it used to bypass belonged to
+                                // the removed Codex OAuth path, and every
+                                // remaining branch fetches uncached. See the
+                                // KDoc on ProviderRepository.refreshModels.
                                 providerRepository.refreshModels(instance, forceRefresh = true)
                                 AppLogger.info(TAG, "Refreshed models for ${instance.id}")
                             } catch (e: Exception) {

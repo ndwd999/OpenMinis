@@ -2528,11 +2528,22 @@ class ProviderRepository(private val context: Context) {
         modelReconciler.trigger(instanceId, forceRefresh)
 
     /**
-     * @param forceRefresh set by a user-initiated Refresh tap. Today only the
-     *   Codex discovery path reads it ([T-codex-dynamic-discovery GH#319]:
-     *   "手动点击刷新必须真正绕过缓存重新拉取"); every other path is already
-     *   uncached at this level. Defaulted false so background/auto refresh and
-     *   the existing call sites keep their behaviour.
+     * @param forceRefresh historically meant "a user tapped Refresh, so bypass
+     *   any discovery cache". That cache belonged to the Codex OAuth discovery
+     *   path ([T-codex-dynamic-discovery GH#319]), which this build no longer
+     *   has — CodexModelsApi survives as an uncalled file and every remaining
+     *   branch below is uncached at this level.
+     *
+     *   The parameter is therefore INERT: it is threaded through
+     *   ModelReconciler.trigger → refresh → here and read by nothing. It is kept
+     *   rather than removed because it is part of the public signature that
+     *   triggerAsyncModelReconcile and the Refresh call sites already pass;
+     *   deleting it is a separate change with its own blast radius.
+     *
+     *   Recorded here rather than left implied so the next person does not
+     *   assume a manual Refresh is bypassing something it is not. What a manual
+     *   Refresh actually does differently is nothing at this layer — see
+     *   refreshModels' callers for the parts that do differ.
      * @param onVendorError [T-onboarding-model-fetch-fallback] receives the
      *   vendor fetch's error message. The fetch still falls through to the
      *   models.dev fallback exactly as before; this only lets a caller that has
