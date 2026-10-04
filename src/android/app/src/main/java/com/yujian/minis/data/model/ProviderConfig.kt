@@ -110,16 +110,16 @@ enum class ProviderType(val displayName: String) {
          */
         fun decoded(raw: String): ProviderType =
             entries.firstOrNull { it.name == raw } ?: unsupported
-    }
 
-    /**
-     * Decode a raw credential-type string without throwing. The `oauth` value
-     * is retired but still present in older databases, and `valueOf` on it is
-     * an [IllegalArgumentException] that would abort loading the provider
-     * config entirely — so every read path uses this and lands on [apiKey].
-     */
-    fun credentialDecoded(raw: String): ProviderCredential =
-        runCatching { ProviderCredential.valueOf(raw) }.getOrDefault(ProviderCredential.apiKey)
+        /**
+         * Decode a raw credential-type string without throwing. The `oauth` value
+         * is retired but still present in older databases, and `valueOf` on it is
+         * an [IllegalArgumentException] that would abort loading the provider
+         * config entirely — so every read path uses this and lands on [apiKey].
+         */
+        fun credentialDecoded(raw: String): ProviderCredential =
+            runCatching { ProviderCredential.valueOf(raw) }.getOrDefault(ProviderCredential.apiKey)
+    }
 }
 
 @Serializable

@@ -161,6 +161,9 @@ fun ThinkingRulesSection(
         )
         if (defaultsExpanded) {
             builtIns.forEachIndexed { idx, rule ->
+                // Resolved here, not inside onClick: stringResource is @Composable
+                // and the click lambda is a plain (non-composable) scope.
+                val copyLabel = stringResource(R.string.thinking_rules_copy_label, rule.label)
                 ThinkingRuleRow(
                     title = rule.label,
                     subtitle = ruleScopeSummary(rule) + " · " + wireFormatSummary(rule.wireFormat),
@@ -171,7 +174,7 @@ fun ThinkingRulesSection(
                             existingId = null,
                             seed = rule.copy(
                                 kind = ThinkingRule.Kind.CUSTOM,
-                                label = stringResource(R.string.thinking_rules_copy_label, rule.label),
+                                label = copyLabel,
                             ),
                             isNew = true,
                         )

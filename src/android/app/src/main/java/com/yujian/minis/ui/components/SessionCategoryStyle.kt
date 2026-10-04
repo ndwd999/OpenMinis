@@ -45,7 +45,7 @@ fun sessionCategoryStyle(category: String?): SessionCategoryStyle {
         "math"         -> SessionCategoryStyle(Icons.Outlined.Calculate, SessionCategoryColors.Violet)
         "translation"  -> SessionCategoryStyle(Icons.Outlined.Translate, SessionCategoryColors.Cyan)
         "health"       -> SessionCategoryStyle(Icons.Outlined.Favorite, IosAccents.Red)
-        "finance"      -> SessionCategoryStyle(Icons.Outlined.Payments, IosAccents.Mint)
+        "finance"      -> SessionCategoryStyle(Icons.Outlined.Payments, SessionCategoryColors.Mint)
         "travel"       -> SessionCategoryStyle(Icons.Outlined.Map, SessionCategoryColors.Amber)
         "education"    -> SessionCategoryStyle(Icons.Outlined.Book, SessionCategoryColors.Azure)
         "design"       -> SessionCategoryStyle(Icons.Outlined.Palette, IosAccents.Pink)

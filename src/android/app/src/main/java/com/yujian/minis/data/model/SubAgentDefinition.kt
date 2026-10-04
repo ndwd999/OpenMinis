@@ -277,4 +277,21 @@ object SubAgentRoster {
         return roster.firstOrNull { nameKey(it.name) == raw }
     }
 
+    /**
+     * The comparison form of a name: trimmed, case-folded and diacritic-folded.
+     *
+     * The name comes back from a MODEL, which may not reproduce accents exactly,
+     * and the stored side is user-typed and may carry stray whitespace. Folding
+     * both is what stops a roster entry named " Résumé-agent " from resolving on
+     * one platform and failing with `unknown_agent` on the other. Matches iOS
+     * SubAgentDefinition.nameKey.
+     */
+    fun nameKey(s: String): String =
+        java.text.Normalizer.normalize(s.trim(), java.text.Normalizer.Form.NFD)
+            .replace(COMBINING_MARKS, "")
+            .lowercase()
+
+    /** Hoisted out of [nameKey]: [normalize] and [resolve] both call it in loops. */
+    private val COMBINING_MARKS = Regex("\\p{Mn}+")
+
 }
