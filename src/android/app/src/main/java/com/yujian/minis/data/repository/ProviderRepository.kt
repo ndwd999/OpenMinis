@@ -1445,6 +1445,15 @@ class ProviderRepository(private val context: Context) {
         // Same cascade replaceEntries does for entries it deletes: drop the
         // now-dangling group members and agent-loop pins. removeEntry does the
         // identical fix-up for a single deletion; this is the bulk form.
+        //
+        // Note this cascade is UNCONDITIONAL, unlike replaceEntries', which
+        // skips it when the response looks suspiciously small (`suspiciousShrink`)
+        // so a transient failure cannot gut the user's curated sets. That guard
+        // exists for an AUTOMATIC path acting on data it distrusts. This path
+        // acts on an explicit confirmation, and the gate above only ever selects
+        // entries whose absence has already outlived the grace window — keeping
+        // a reference to one of those would leave a dangling id in a group the
+        // user just cleaned. The guard would be wrong here, not missing.
         config.modelGroups.forEach { group ->
             group.memberEntryIds.removeAll { it in doomedIds }
         }

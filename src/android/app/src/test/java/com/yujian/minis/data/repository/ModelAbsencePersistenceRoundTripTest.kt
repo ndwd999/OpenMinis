@@ -44,7 +44,18 @@ import org.junit.Test
  */
 class ModelAbsencePersistenceRoundTripTest {
 
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    /**
+     * Deliberately identical to the instance ProviderRepository builds
+     * (`ignoreUnknownKeys` / `encodeDefaults` / `coerceInputValues`). A test
+     * Json with different flags exercises a codec the app never uses, so a
+     * field whose round trip depends on one of the other flags would pass here
+     * and fail on device.
+     */
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        coerceInputValues = true
+    }
 
     private val instanceId = "inst-1"
     private val t0 = 1_800_000_000_000L
