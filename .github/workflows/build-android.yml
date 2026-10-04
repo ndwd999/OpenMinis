@@ -47,12 +47,14 @@ jobs:
       - name: Cache native build artifacts
         # 官方 README 指出原生产物随 NDK 版本不同而不同，但在同一 runner
         # 镜像上缓存可省去每次重编 proot 的一段时间。
-        path: |
-          deps/build
-          src/android/app/libs
-        key: native-${{ runner.os }}-${{ hashFiles('deps/build_proot.sh', 'deps/build_rclone_android.sh') }}
-        restore-keys: |
-          native-${{ runner.os }}-
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps/build
+            src/android/app/libs
+          key: native-${{ runner.os }}-${{ hashFiles('deps/build_proot.sh', 'deps/build_rclone_android.sh') }}
+          restore-keys: |
+            native-${{ runner.os }}-
 
       - name: Install native toolchain
         run: |
