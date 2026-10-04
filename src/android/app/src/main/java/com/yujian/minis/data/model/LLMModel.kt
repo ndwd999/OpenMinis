@@ -5,6 +5,25 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class LLMModel(
     val id: String,
+    /**
+     * [T-model-display-name-follows-id] The label shown for this model.
+     *
+     * For every model that arrives from a provider's /v1/models this is set to
+     * [id] — the endpoint's own name is ignored, so one model reads identically
+     * in the picker, in a group, and in the request the user assembles by hand.
+     * Aggregators and relays were the reason: the same model carried a different
+     * label per provider, and a relay's marketing name often bore no relation to
+     * the id the user must type elsewhere.
+     *
+     * A name the user typed overrides this and is stored separately, in
+     * `ModelEntry.overrides.displayName` — that field is non-null only once the
+     * model detail screen has been saved with a non-blank value, so it doubles
+     * as the "user expressed intent" marker.
+     *
+     * The built-in seed models in this file are the exception: they keep their
+     * curated names ("Claude Opus 5.5") because those entries exist to be read,
+     * and the user never typed them.
+     */
     val displayName: String,
     val provider: String,
     val contextWindow: Int? = null,
