@@ -18,6 +18,7 @@ on:
     paths:
       - "src/android/**"
       - "deps/**"
+      - "scripts/prepare_android_sandbox.sh"
       - ".github/workflows/build-android.yml"
 
 # 完整原生构建（proot + rclone + 沙箱 rootfs）耗时较长，放宽超时。
@@ -61,22 +62,68 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build pkg-config
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          # 不指定版本时 setup-android 会装 cmdline-tools 16.0，它在本
-          # runner 上以 exit 1 失败。固定到已知可用的稳定版。
-          cmdline-tools-version: 11076708
+      # ─────────────────────────────────────────────────────────────────────
+      # 刻意不使用 android-actions/setup-android@v3。
+      # 该 action 在接受许可之后会额外执行一次 `sdkmanager tools`，而 Google
+      # 已把这个 legacy 包从 SDK 仓库下架，于是必然：
+      #     Warning: Failed to find package 'tools'
+      #     Error: ... failed with exit code 1
+      # 即许可其实已全部接受（"All SDK package licenses accepted"），失败
+      # 发生在安装这个被下架的包这一步。ubuntu runner 镜像本身已预装完整
+      # SDK（/usr/local/lib/android/sdk），因此直接用预装 SDK，无需任何
+      # setup-android / cmdline-tools 下载。
+      - name: Locate preinstalled Android SDK
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          if [ ! -d "$SDK" ]; then
+            echo "::error::no Android SDK at $SDK"; exit 1
+          fi
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          SDKMANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$SDK/cmdline-tools" -name sdkmanager -type f -perm -u+x | sort | tail -1)"
+          fi
+          [ -x "$SDKMANAGER" ] || { echo "::error::sdkmanager not found under $SDK"; exit 1; }
+          echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
+          "$SDKMANAGER" --version
+          echo "--- preinstalled packages ---"
+          ls "$SDK"
+          ls "$SDK/platforms" 2>/dev/null || true
+          ls "$SDK/build-tools" 2>/dev/null || true
+          ls "$SDK/ndk" 2>/dev/null || true
+          ls "$SDK/cmake" 2>/dev/null || true
+
+      - name: Accept Android SDK licenses
+        run: |
+          set -euo pipefail
+          # licenses 直接写入 $ANDROID_SDK_ROOT/licenses，Gradle/AGP 之后
+          # 自动补装缺失组件时也会复用这份已接受的许可。
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          ls "$ANDROID_SDK_ROOT/licenses"
 
       - name: Install SDK packages
         run: |
-          # 接受许可，否则 sdkmanager 会在交互提示处挂起。
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0" "cmake;3.22.1"
-          # NDK r28+ 是硬性要求（build.gradle.kts 依赖 r28 工具链）
-          sdkmanager "ndk;28.0.13004108"
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.0.13004108" >> "$GITHUB_ENV"
-          echo "NDK: $ANDROID_SDK_ROOT/ndk/28.0.13004108"
+          set -euo pipefail
+          # compileSdk=36 / targetSdk=35 见 src/android/app/build.gradle.kts；
+          # externalNativeBuild.cmake.version 硬编码 3.22.1，故装对应 cmake。
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;35.0.0" \
+            "cmake;3.22.1"
+          # build_proot.sh 明确要求 NDK r28+；gomobile bind 也需要一个 NDK。
+          "$SDKMANAGER" "ndk;28.0.13004108"
+          NDK_DIR="$ANDROID_SDK_ROOT/ndk/28.0.13004108"
+          if [ ! -d "$NDK_DIR" ]; then
+            # 版本号若被 Google 调整，退而取任意可用的 28.x
+            NDK_DIR="$(ls -1d "$ANDROID_SDK_ROOT"/ndk/28.* 2>/dev/null | sort -V | tail -1 || true)"
+          fi
+          [ -n "$NDK_DIR" ] && [ -d "$NDK_DIR" ] || { echo "::error::NDK r28 not installed"; exit 1; }
+          echo "ANDROID_NDK_HOME=$NDK_DIR" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$NDK_DIR" >> "$GITHUB_ENV"
+          "$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang" --version | head -2
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -88,6 +135,7 @@ jobs:
 
       - name: Set up gomobile
         run: |
+          set -euo pipefail
           go install golang.org/x/mobile/cmd/gomobile@latest
           go install golang.org/x/mobile/cmd/gobind@latest
           "$(go env GOPATH)/bin/gomobile" init
@@ -119,14 +167,17 @@ jobs:
 
       - name: Verify sandbox assets present
         run: |
+          set -euo pipefail
           # 沙箱资产缺失时应用能启动但 execve 失败，症状隐蔽，
           # 因此在构建期就断言三件套齐全。
-          for f in assets/proot-aarch64 jniLibs/arm64-v8a/libproot-loader.so jniLibs/arm64-v8a/libproot-loader32.so; do
+          for f in assets/proot-aarch64 \
+                   jniLibs/arm64-v8a/libproot-loader.so \
+                   jniLibs/arm64-v8a/libproot-loader32.so; do
             if [ ! -e "src/android/app/src/main/$f" ]; then
               echo "::error::missing $f — rerun deps/build_proot.sh"; exit 1
             fi
           done
-          ls -la src/android/app/src/main/assets/ | head
+          ls -la src/android/app/src/main/assets/
 
       - name: Build APK
         working-directory: src/android
