@@ -1,0 +1,119 @@
+name: Build Android APK
+
+# 只做 Android：官方 iOS 原生依赖（iSH/Metal/FFmpeg）仅 macOS runner 可构建，
+# 且 macOS 在 GitHub 免费额度里按 3 倍速率计费。此处刻意限定 ubuntu。
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Gradle build type"
+        type: choice
+        options:
+          - release
+          - debug
+        default: release
+  push:
+    branches:
+      - main
+    paths:
+      - "src/android/**"
+      - "deps/**"
+      - ".github/workflows/build-android.yml"
+
+# 完整原生构建（proot + rclone + 沙箱 rootfs）耗时较长，放宽超时。
+jobs:
+  build:
+    name: Build APK (arm64-v8a)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          # deps/ish 与 deps/proot 是子模块，指向公开的 OpenMinis/* 仓库。
+          # 缺这一步原生构建会在链接阶段报 undefined symbol。
+          submodules: recursive
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache native build artifacts
+        # 官方 README 指出原生产物随 NDK 版本不同而不同，但在同一 runner
+        # 镜像上缓存可省去每次重编 proot 的一段时间。
+        path: |
+          deps/build
+          src/android/app/libs
+        key: native-${{ runner.os }}-${{ hashFiles('deps/build_proot.sh', 'deps/build_rclone_android.sh') }}
+        restore-keys: |
+          native-${{ runner.os }}-
+
+      - name: Install native toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build pkg-config
+          # Go 1.25+ 用于 gomobile 绑定 rclone
+          sudo apt-get install -y golang-go
+          go version
+
+      - name: Set up gomobile
+        run: |
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind@latest
+          $(go env GOPATH)/bin/gomobile init
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0" "cmake;3.22.1"
+          # NDK r28+ 是硬性要求（build.gradle.kts 依赖 r28 的工具链）
+          sdkmanager "ndk;28.0.13004108"
+
+      - name: Build PRoot (native)
+        run: ./deps/build_proot.sh
+
+      - name: Prepare Android sandbox rootfs
+        run: ./scripts/prepare_android_sandbox.sh
+
+      - name: Build rclone for Android
+        run: ./deps/build_rclone_android.sh
+
+      - name: Stage rclone.aar
+        run: |
+          mkdir -p src/android/app/libs
+          cp deps/build/rclone/rclone.aar src/android/app/libs/
+
+      - name: Create provider-customization.properties
+        run: |
+          # 公开仓库只提供 .example 空值模板；空值可编译可运行，
+          # 仅 Claude OAuth 登录会在运行时失败（API key 登录不受影响）。
+          cp src/android/app/provider-customization.properties.example \
+             src/android/app/provider-customization.properties
+
+      - name: Verify sandbox assets present
+        run: |
+          # 沙箱资产缺失时应用能启动但 execve 失败，症状隐蔽，
+          # 因此在构建期就断言三件套齐全。
+          for f in assets/proot-aarch64 jniLibs/arm64-v8a/libproot-loader.so jniLibs/arm64-v8a/libproot-loader32.so; do
+            if [ ! -e "src/android/app/src/main/$f" ]; then
+              echo "::error::missing $f — rerun deps/build_proot.sh"; exit 1
+            fi
+          done
+          ls -la src/android/app/src/main/assets/ | head
+
+      - name: Build APK
+        working-directory: src/android
+        run: ./gradlew :app:assemble${{ github.event.inputs.build_type || 'Release' }} --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MinisApp-${{ github.event.inputs.build_type || 'release' }}-arm64-v8a
+          path: src/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 30
