@@ -72,9 +72,23 @@ jobs:
 
       - name: Install Android SDK components
         run: |
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0" "cmake;3.22.1"
+          # ubuntu-latest runner 预装了 Android SDK，但 sdkmanager 不在默认
+          # PATH 上，必须显式使用 ANDROID_HOME 下的 cmdline-tools 路径。
+          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(ls -d "${ANDROID_SDK_ROOT:-$ANDROID_HOME}"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -1)"
+          fi
+          if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
+            echo "::error::sdkmanager not found under ${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;35.0.0" "cmake;3.22.1"
           # NDK r28+ 是硬性要求（build.gradle.kts 依赖 r28 的工具链）
-          sdkmanager "ndk;28.0.13004108"
+          "$SDKMANAGER" "ndk;28.0.13004108"
+          # 记录实际安装的 NDK 版本，供后续 proot 构建步骤使用
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.0.13004108" >> "$GITHUB_ENV"
+          echo "NDK installed at: $ANDROID_SDK_ROOT/ndk/28.0.13004108"
 
       - name: Build PRoot (native)
         run: ./deps/build_proot.sh
