@@ -1111,8 +1111,6 @@
     <string name="provider_detail_add_custom_model">Add Custom Model</string>
     <string name="provider_detail_delete_provider">Delete Provider</string>
     <string name="provider_detail_delete_model">Delete Model</string>
-    <string name="provider_detail_hide_model">Hide Model</string>
-    <string name="provider_detail_show_model">Show Model</string>
     <string name="provider_detail_sign_out">Sign Out</string>
     <string name="provider_detail_sign_in">Sign In</string>
     <string name="provider_oauth_sign_in_expired">Sign-in expired</string>
@@ -1159,9 +1157,8 @@
     <string name="model_entry_display_name">Display Name</string>
     <string name="model_entry_max_output_tokens">Max Output Tokens</string>
     <string name="model_entry_provider">Provider</string>
-    <string name="model_entry_visibility">Visibility</string>
-    <string name="model_entry_hidden_models_won_t_appear_in_the_model_">Hidden models won\'t appear in the model picker.</string>
-    <string name="model_entry_hidden">Hidden</string>
+    <string name="model_entry_danger_zone">Remove</string>
+    <string name="model_entry_delete_footer">Deleting takes the model out of every list and group, along with any settings you gave it. A model the provider lists again is re-added on the next refresh.</string>
     <string name="model_entry_restores_the_provider_reported_display_n">Restores the provider-reported display name and token limits, and un-hides the model.</string>
     <string name="model_entry_reset_to_default">Reset to Default</string>
     <!-- T210: ModelEntryDetailScreen sections (iOS parity). -->
@@ -2147,15 +2144,23 @@
          removed, because a pruned entry takes its per-model settings with it. -->
     <string name="provider_detail_clear_unavailable_models">Remove %1$d unlisted models</string>
     <string name="provider_detail_clear_unavailable_models_dialog_title">Remove unlisted models?</string>
-    <string name="provider_detail_clear_unavailable_models_dialog_text">The provider no longer lists these %1$d models, so they are already hidden from pickers. Removing them also deletes any settings or custom names you gave them. Models you added by hand are kept.</string>
+    <string name="provider_detail_clear_unavailable_models_dialog_text">The provider no longer lists these %1$d models, so they are already hidden from pickers. Removing them also deletes any settings or custom names you gave them. Models you added by hand are kept, and a model the provider lists again later will simply come back as a new entry.</string>
     <string name="provider_detail_clear_unavailable_models_confirm">Remove</string>
     <string name="provider_detail_clear_unavailable_models_done">Removed %1$d unlisted models</string>
+    <string name="provider_detail_clear_unavailable_models_none">No unlisted models left to remove</string>
     <string name="provider_list_no_api_key">No API key</string>
     <string name="provider_list_import_success">Imported provider \"%1$s\"</string>
     <string name="provider_list_import_invalid_file">Invalid provider configuration file</string>
     <string name="provider_list_import_read_failed">Failed to read file</string>
     <string name="add_provider_type_openai">OpenAI / Compatible API</string>
     <string name="add_provider_type_anthropic">Anthropic / Compatible API</string>
+    <!-- [T-android-add-provider-single-page] Short forms for the protocol
+         segmented control. The labels above are sentences ("OpenAI / Compatible
+         API") and overflow three equal columns; the protocol is already
+         described in the section footer, so the control only needs the name. -->
+    <string name="add_provider_type_openai_short">OpenAI</string>
+    <string name="add_provider_type_anthropic_short">Claude</string>
+    <string name="add_provider_type_gemini_short">Gemini</string>
     <string name="add_provider_key_placeholder_gemini">Gemini API Key…</string>
     <string name="add_provider_key_placeholder_default">API Key…</string>
     <string name="add_provider_endpoint_hint_gemini">Leave empty to use the default Google endpoint. Enter the full base URL including version path.</string>

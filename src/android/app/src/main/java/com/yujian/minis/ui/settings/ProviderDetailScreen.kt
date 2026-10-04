@@ -50,7 +50,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -546,11 +545,18 @@ fun ProviderDetailScreen(
 
             // [T-android-model-absence-manual-prune] Explicit prune, directly
             // under Refresh. Refresh marks entries the provider stopped listing
-            // and the repository drops them once they have been absent past
-            // MODEL_ABSENCE_GRACE_MS (7 days) — the window that keeps a relay
-            // hiccup from destroying per-model overrides. A user looking at a
-            // list of stale rows should not have to wait out seven days, so
-            // this row performs the same deletion on demand.
+            // (absentSince) and the repository drops them automatically once the
+            // absence has outlived MODEL_ABSENCE_GRACE_MS — the window that keeps
+            // a relay hiccup from destroying per-model overrides. This row is the
+            // user's way to skip that wait: it deletes every MARKED row right
+            // now, so the count it shows is exactly the count it removes.
+            //
+            // The count and the deletion used to disagree — this row counted
+            // every marked entry while the repository deleted only the ones past
+            // the grace window, so tapping "clear N models" removed nothing until
+            // N had been marked for a week, with no feedback either way. The
+            // window still guards the automatic path, where acting on data the
+            // provider has merely failed to mention would be reckless.
             //
             // Gated on the count rather than always shown, so the row only
             // exists when it has work to do and can never be tapped into a
@@ -580,19 +586,20 @@ fun ProviderDetailScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // [T-android-hidden-model-visual-state] Dim hidden
-                        // entries so the list visually distinguishes them from
-                        // active models — the " • Hidden" subtitle suffix alone
-                        // wasn't enough for users to tell them apart. alpha is
-                        // visual-only, so the row stays tappable to re-show the
-                        // model from its detail screen.
-                        .then(if (entry.isHidden) Modifier.alpha(0.45f) else Modifier)
+                        // [T-android-model-hide-to-delete] The dimming and the
+                        // " • Hidden" suffix are gone with the Hide action they
+                        // described. isHidden still exists in the data layer —
+                        // SystemVoiceEntries relies on it to stay out of the
+                        // ordinary pickers — but nothing user-facing sets it any
+                        // more, so a legacy true value would have permanently
+                        // greyed out a row with no way to restore it. Every
+                        // visible row is now simply an active model.
                         .combinedClickable(
                             onClick = { onModelEntryClick(entry.id) },
-                            // [T-android-model-row-hide-action] Long-press now
-                            // opens a menu instead of going straight to delete.
-                            // Hiding was previously reachable ONLY by opening
-                            // the model's detail screen, flipping the
+                            // [T-android-model-row-delete-action] Long-press opens
+                            // the row menu, whose single item deletes the entry.
+                            // It used to be a Hide toggle reachable only by
+                            // opening the model's detail screen, flipping the
                             // Visibility switch and pressing Save — five steps
                             // for what iOS does with one tap on an eye button
                             // in this very list (ProviderInstanceDetailView).
@@ -606,11 +613,7 @@ fun ProviderDetailScreen(
                             //
                             // It also fills a dead gesture: long-press used to
                             // be null for built-in entries, so they had no
-                            // context action at all. They still cannot be
-                            // deleted (the repo re-creates them from
-                            // ProviderType.builtInModels on the next refresh),
-                            // but hiding is exactly the supported way to get one
-                            // out of the picker.
+                            // context action at all.
                             onLongClick = { menuEntryId = entry.id },
                         ),
                 ) {
@@ -625,13 +628,13 @@ fun ProviderDetailScreen(
                     val outputModalities = entry.model.outputModalities.orEmpty()
                     val hasBadge = inputModalities.any { it in modalityIconKeys } ||
                         outputModalities.any { it in modalityOutputIconKeys }
-                    val hiddenLabel = stringResource(R.string.model_entry_hidden)
                     SettingsRow(
                         title = entry.model.displayName,
-                        subtitle = buildString {
-                            append(entry.model.id)
-                            if (entry.isHidden) append(" • " + hiddenLabel)
-                        },
+                        // [T-android-model-hide-to-delete] The " • Hidden"
+                        // suffix went with the Hide action. A legacy isHidden
+                        // from an older build would otherwise keep decorating
+                        // rows that the user can no longer un-hide.
+                        subtitle = entry.model.id,
                         // onClick = null so SettingsRow doesn't add a second
                         // clickable that would swallow the long-press. The
                         // wrapping Box owns both gestures.
@@ -658,10 +661,24 @@ fun ProviderDetailScreen(
                         },
                     )
 
-                    // [T-android-model-row-hide-action] Row context menu. Anchored
-                    // inside the row's Box so it opens over the entry the user
-                    // pressed. Delete stays custom-only, matching the previous
-                    // long-press behaviour and the repo's constraint.
+                    // [T-android-model-row-delete-action] Row context menu.
+                    // Anchored inside the row's Box so it opens over the entry the
+                    // user pressed.
+                    //
+                    // This used to offer Hide/Show on every row plus Delete on
+                    // custom rows only. Two actions for one intent, and the
+                    // common case was five steps: the model had to be taken out
+                    // of the picker by flipping a flag, which left the row
+                    // sitting there greyed out and permanently occupying a slot
+                    // in a list the user was trying to tidy. A user who wants a
+                    // model GONE now gets one menu item that removes it, and the
+                    // row leaves with it.
+                    //
+                    // Deletion is offered on built-in entries too (the repo
+                    // re-creates those from ProviderType.builtInModels on the
+                    // next refresh, so a mistaken delete self-heals rather than
+                    // leaving a hole). The entry is still removed right now, so
+                    // the list reflects the intent immediately.
                     DropdownMenu(
                         expanded = menuEntryId == entry.id,
                         onDismissRequest = { menuEntryId = null },
@@ -669,54 +686,22 @@ fun ProviderDetailScreen(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    stringResource(
-                                        if (entry.isHidden) R.string.provider_detail_show_model
-                                        else R.string.provider_detail_hide_model,
-                                    ),
+                                    stringResource(R.string.common_delete),
+                                    color = MaterialTheme.colorScheme.error,
                                 )
                             },
                             leadingIcon = {
                                 Icon(
-                                    if (entry.isHidden) Icons.Filled.Visibility
-                                    else Icons.Filled.VisibilityOff,
+                                    Icons.Filled.Delete,
                                     contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
                                 )
                             },
                             onClick = {
                                 menuEntryId = null
-                                // Write straight through — no Save step. This is
-                                // the whole point of the affordance, and it
-                                // mirrors iOS, whose eye button calls
-                                // store.updateEntry immediately.
-                                providerRepository.updateEntry(entry.copy(isHidden = !entry.isHidden))
-                                AppLogger.info(
-                                    TAG,
-                                    "Model entry ${entry.id} (${entry.model.displayName}) " +
-                                        "isHidden ${entry.isHidden} -> ${!entry.isHidden}",
-                                )
+                                entryToDelete = entry
                             },
                         )
-                        if (entry.isCustom) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        stringResource(R.string.common_delete),
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Filled.Delete,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
-                                },
-                                onClick = {
-                                    menuEntryId = null
-                                    entryToDelete = entry
-                                },
-                            )
-                        }
                     }
                 }
             }
@@ -812,13 +797,22 @@ fun ProviderDetailScreen(
                 // Report the repository's own count, not unlistedCount: the two
                 // can differ if a refresh lands between render and tap, and the
                 // number that actually left the database is the honest one.
+                //
+                // [T-android-model-absence-prune-grace-mismatch] The zero case
+                // used to fall back to null, i.e. NO feedback at all — which is
+                // how a prune that deleted nothing looked identical to one that
+                // worked. Silence is only acceptable when there was nothing to
+                // report, and "the list emptied itself between render and tap"
+                // is a report: it means the rows are already gone.
                 clearUnavailableResult = if (removed > 0) {
                     exportContext.getString(
                         R.string.provider_detail_clear_unavailable_models_done,
                         removed,
                     )
                 } else {
-                    null
+                    exportContext.getString(
+                        R.string.provider_detail_clear_unavailable_models_none,
+                    )
                 }
                 AppLogger.info(
                     TAG,

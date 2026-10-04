@@ -1219,17 +1219,28 @@ class ProviderRepository(private val context: Context) {
                     outputModalities = tplModel.outputModalities,
                 )
             }
-            // [fix] Preserve a prior entry's human-readable displayName when the API
-            // returns a bare model id as the displayName. Prevents regressions like:
-            //   prior: displayName="DeepSeek V4 Pro"  →  refresh  →  displayName="deepseek-v4-pro"
-            val resolvedDisplayName = when {
-                model.displayName.isBlank() || model.displayName == model.id ->
-                    // Remote gave no meaningful name — keep prior's good name if available
-                    prior?.baseModel?.displayName
-                        ?.takeIf { it.isNotBlank() && it != model.id }
-                        ?: model.displayName
-                else -> model.displayName  // Remote gave a real name; use it
-            }
+            // [T-model-display-name-follows-id] The display name defaults to the
+            // model id. Previously whatever the endpoint reported won, which on
+            // an aggregator produced a list where the same model showed a
+            // different label per provider, and on a relay it was often a
+            // marketing string ("DeepSeek V4 Pro") that did not match the id
+            // the user has to type everywhere else in the app — so the picker,
+            // the group detail and the request payload disagreed about what the
+            // model was called. Tying the label to the id makes every surface
+            // name the same thing, and an id is what most relays and gateways
+            // expect the user to recognize anyway.
+            //
+            // A name the USER typed still wins: `overrides.displayName` is
+            // non-null only once the model detail screen has been saved with a
+            // non-blank value, which is exactly the "the user expressed intent"
+            // marker used by the rest of this class. Those entries keep their
+            // custom label across refreshes instead of snapping back to the id.
+            //
+            // Not applied to the voice templates' synthesized entries or to
+            // custom entries the user named by hand — those never come from an
+            // endpoint name we would be overriding here.
+            val userNamed = prior?.overrides?.displayName?.takeIf { it.isNotBlank() }
+            val resolvedDisplayName = userNamed ?: model.id
             resolved = resolved.copy(displayName = resolvedDisplayName)
             ModelEntry(
                 providerInstanceId = instanceId,
@@ -1417,25 +1428,34 @@ class ProviderRepository(private val context: Context) {
      * absence from /v1/models says nothing about whether the user still wants
      * them. This mirrors replaceEntries, which only ever guards catalog rows.
      *
-     * [T-android-model-absence-prune-now-ms] `nowMs` is a parameter rather than
-     * a System.currentTimeMillis() call so a unit test can push the clock past
-     * [MODEL_ABSENCE_GRACE_MS] and assert that an entry the *previous* pass
-     * marked absent is actually pruned on this one. Hard-coding the clock here
-     * is exactly what let the missing `absent_since` column hide: the old
-     * grace test restated the rule by hand instead of exercising this path.
+     * [T-android-model-absence-prune-grace-mismatch] The selection is EVERY
+     * entry with an absence mark, NOT only the ones past
+     * [MODEL_ABSENCE_GRACE_MS]. It used to apply the window here too, which
+     * contradicted both the KDoc above and the settings row that calls it: that
+     * row counted candidates with `isUnavailableFromProvider` (any mark at all,
+     * freshly stamped included), so tapping "clear N models" deleted nothing
+     * for any model marked within the last seven days and the screen gave no
+     * feedback — the exact "清理不生效" report. The count and the deletion must
+     * select the same set or the promise is a lie.
+     *
+     * The window still guards the AUTOMATIC path, which is where acting on
+     * unverified data is risky: a relay that drops a model for minutes would
+     * otherwise take the user's overrides with it. This path is a tap the user
+     * confirms after seeing the marked rows, so there is nothing unverified to
+     * distrust — waiting out the window here only delayed a decision the user
+     * had already made.
      *
      * @return how many entries were removed, for the caller's confirmation toast.
      */
     fun clearUnavailableEntries(
         instanceId: String,
-        nowMs: Long = System.currentTimeMillis(),
     ): Int = synchronized(configLock) {
         ensureConfigLoaded()
         val config = workingCopy()
         val doomed = config.modelEntries.filter {
             it.providerInstanceId == instanceId &&
                 !it.isCustom &&
-                it.absentSince?.let { since -> nowMs - since > MODEL_ABSENCE_GRACE_MS } == true
+                it.isUnavailableFromProvider
         }
         if (doomed.isEmpty()) return@synchronized 0
 
@@ -1449,11 +1469,8 @@ class ProviderRepository(private val context: Context) {
         // Note this cascade is UNCONDITIONAL, unlike replaceEntries', which
         // skips it when the response looks suspiciously small (`suspiciousShrink`)
         // so a transient failure cannot gut the user's curated sets. That guard
-        // exists for an AUTOMATIC path acting on data it distrusts. This path
-        // acts on an explicit confirmation, and the gate above only ever selects
-        // entries whose absence has already outlived the grace window — keeping
-        // a reference to one of those would leave a dangling id in a group the
-        // user just cleaned. The guard would be wrong here, not missing.
+        // exists for an AUTOMATIC path acting on data it distrusts; this path
+        // acts on an explicit confirmation of exactly these entries.
         config.modelGroups.forEach { group ->
             group.memberEntryIds.removeAll { it in doomedIds }
         }
