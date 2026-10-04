@@ -1,16 +1,11 @@
 package com.yujian.minis.ui.settings
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.Diamond
-import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.GraphicEq
@@ -22,99 +17,96 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
+import com.yujian.minis.R
 import com.yujian.minis.data.model.ProviderCredential
 import com.yujian.minis.data.model.ProviderInstance
 import com.yujian.minis.data.model.ProviderType
+import com.yujian.minis.data.model.VoiceProviderTemplate
 import com.yujian.minis.data.repository.ProviderRepository
-import com.yujian.minis.R
-import java.util.UUID
 import com.yujian.minis.ui.components.MinisButton
 import com.yujian.minis.ui.components.RowLabel
 import com.yujian.minis.ui.components.SectionTextField
+import java.util.UUID
 
-private enum class AddProviderStep {
-    CHOOSE_TYPE,
-    CONFIGURE,
-}
-
+/**
+ * [T-android-add-provider-single-page] Add a provider — one page.
+ *
+ * This used to be a two-step wizard: pick a protocol from a list of three, then
+ * configure it. With only three protocols the first screen was almost pure
+ * navigation — three rows, each one a tap that revealed the same form with one
+ * thing pre-set, and every field the user actually fills in lived on the second
+ * screen. The protocol is a segmented control at the top of the form now, so the
+ * choice and the configuration it affects are visible together, and switching
+ * protocol keeps whatever was already typed wherever that still applies.
+ *
+ * The voice-chat presets stay a separate section: they are not protocols but
+ * pre-filled vendor templates (base URL + seeded voice models), and burying them
+ * in a dropdown would hide the only thing that makes them useful.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddProviderScreen(
     providerRepository: ProviderRepository,
     onBack: () -> Unit,
     onSaved: () -> Unit,
 ) {
-    var step by remember { mutableStateOf(AddProviderStep.CHOOSE_TYPE) }
-    var selectedType by remember { mutableStateOf<ProviderType?>(null) }
-    // [T-android-provider-voice] Non-null when the flow was entered from a
-    // Voice Chat Provider template row — preseeds type/base URL/label/appendV1
-    // on the configure step (mirrors iOS applyVoiceTemplate).
-    var selectedVoiceTemplate by remember {
-        mutableStateOf<com.yujian.minis.data.model.VoiceProviderTemplate?>(null)
-    }
+    var providerType by remember { mutableStateOf(ProviderType.openAI) }
+    var voiceTemplate by remember { mutableStateOf<VoiceProviderTemplate?>(null) }
 
-    // Unified back handler: reuse each step's onBack so predictive-back gesture
-    // and the top-bar arrow behave identically (go back to prior step, not exit).
-    val handleBack: () -> Unit = {
-        when (step) {
-            AddProviderStep.CHOOSE_TYPE -> onBack()
-            AddProviderStep.CONFIGURE -> {
-                step = AddProviderStep.CHOOSE_TYPE
-                selectedType = null
-                selectedVoiceTemplate = null
-            }
-        }
-    }
-
-    // Intercept system back on inner steps; let outer handler pop the route on step 0.
-    BackHandler(enabled = step != AddProviderStep.CHOOSE_TYPE) { handleBack() }
-
-    when (step) {
-        AddProviderStep.CHOOSE_TYPE -> ChooseProviderScreen(
-            onBack = handleBack,
-            onSelect = { type ->
-                selectedType = type
-                step = AddProviderStep.CONFIGURE
+    SettingsScaffold(
+        title = stringResource(R.string.provider_list_add_provider),
+        onBack = onBack,
+    ) {
+        AddProviderForm(
+            providerType = providerType,
+            voiceTemplate = voiceTemplate,
+            onProviderTypeChange = { type ->
+                // [T-android-add-provider-single-page] Switching protocol drops
+                // the template: its base URL and v1 policy belong to ITS vendor,
+                // and carrying them onto another protocol would send the request
+                // to the wrong host. Label and key are typed values, so they
+                // survive — losing those on a mis-tap would be worse.
+                if (type != providerType) {
+                    providerType = type
+                    voiceTemplate = null
+                }
             },
-            onSelectVoiceTemplate = { template ->
-                // Mirror iOS applyVoiceTemplate: pick the underlying protocol
-                // and jump straight to configure.
-                selectedVoiceTemplate = template
-                selectedType = template.providerType
-                step = AddProviderStep.CONFIGURE
+            onVoiceTemplateChange = { template ->
+                // [T-android-provider-voice] Mirror iOS applyVoiceTemplate: adopt
+                // the template's protocol along with its base URL, so picking a
+                // vendor is a single tap rather than protocol-then-vendor.
+                voiceTemplate = template
+                if (template != null) providerType = template.providerType
             },
-        )
-        AddProviderStep.CONFIGURE -> ConfigureProviderScreen(
-            providerType = selectedType!!,
             providerRepository = providerRepository,
-            voiceTemplate = selectedVoiceTemplate,
-            onBack = handleBack,
             onSaved = onSaved,
         )
+
+        Spacer(Modifier.height(24.dp))
     }
 }
 
 /**
- * The provider types this build offers for creation, in display order.
+ * The provider protocols this build offers for creation, in display order.
  *
  * Three API shapes, three entries: the OpenAI-compatible dialect — which also
  * covers every relay and third-party vendor via a custom base URL — Anthropic,
  * and Gemini. `ProviderType` still carries OpenRouter / xAI / Kimi Code /
  * GitHub Copilot / openAIResponses as DECODE-ONLY cases so a config written by
  * another build still loads; see the enum's KDoc. They are deliberately absent
- * here: this list is what the user can create, and every one of those vendors
- * is reachable as an OpenAI-compatible instance with its own base URL.
+ * here: this is what the user can create, and every one of those vendors is
+ * reachable as an OpenAI-compatible instance with its own base URL.
  */
 private val addableProviderTypes = listOf(
     ProviderType.openAI,
@@ -122,115 +114,20 @@ private val addableProviderTypes = listOf(
     ProviderType.gemini,
 )
 
-/** Icon and color per provider type, matching iOS SF Symbols. */
-private fun providerIcon(type: ProviderType): Pair<ImageVector, Color> = when (type) {
-    ProviderType.openAI -> Icons.Default.Hub to Color(0xFF4CAF50)           // green
-    ProviderType.anthropic -> Icons.Default.AutoAwesome to Color(0xFFAB47BC) // purple
-    ProviderType.gemini -> Icons.Default.Diamond to Color(0xFF42A5F5)        // blue
-    // [T-android-provider-type-parity] Types that arrive only from an iOS
-    // package / newer build; never offered in addableProviderTypes, but the
-    // icon helper is also used to render an already-restored instance.
-    ProviderType.openRouter,
-    ProviderType.xAI,
-    ProviderType.kimiCode,
-    ProviderType.githubCopilot,
-    ProviderType.openAIResponses,
-    ProviderType.antigravity,
-    ProviderType.unsupported -> Icons.Default.Cloud to Color(0xFF9E9E9E)
-}
-
-// -- Step 1: Choose Provider Type --
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChooseProviderScreen(
-    onBack: () -> Unit,
-    onSelect: (ProviderType) -> Unit,
-    onSelectVoiceTemplate: (com.yujian.minis.data.model.VoiceProviderTemplate) -> Unit = {},
-) {
-    SettingsScaffold(
-        title = stringResource(R.string.provider_list_add_provider),
-        onBack = onBack,
-    ) {
-        SettingsSection(
-            header = stringResource(R.string.add_provider_choose_provider),
-            footer = stringResource(R.string.add_provider_you_can_add_multiple_instances_of_the_sa),
-        ) {
-            addableProviderTypes.forEachIndexed { index, type ->
-                val displayTitle = when (type) {
-                    ProviderType.openAI -> stringResource(R.string.add_provider_type_openai)
-                    ProviderType.anthropic -> stringResource(R.string.add_provider_type_anthropic)
-                    ProviderType.gemini -> "Google Gemini"
-                    else -> type.displayName
-                }
-                // Describe which vendors each protocol supports, rather than a
-                // raw built-in model count.
-                val subtitleRes = when (type) {
-                    ProviderType.openAI -> R.string.add_provider_subtitle_openai
-                    ProviderType.anthropic -> R.string.add_provider_subtitle_anthropic
-                    ProviderType.gemini -> R.string.add_provider_subtitle_gemini
-                    else -> R.string.add_provider_subtitle_openai
-                }
-                val (icon, iconColor) = providerIcon(type)
-                SettingsRow(
-                    title = displayTitle,
-                    subtitle = stringResource(subtitleRes),
-                    icon = icon,
-                    iconColor = iconColor,
-                    onClick = { onSelect(type) },
-                    showDivider = index < addableProviderTypes.size - 1,
-                )
-            }
-        }
-
-        // [T-android-provider-voice] Voice Chat Providers — one row per voice
-        // vendor template. Tapping prefills the underlying protocol + base URL
-        // and jumps to configure (mirrors iOS voiceProviderSection).
-        val templates = com.yujian.minis.data.model.VoiceProviderTemplate.all
-        val templateNotes = templates.mapNotNull { it.note }
-        SettingsSection(
-            header = stringResource(R.string.add_provider_voice_chat_providers),
-            footer = (
-                listOf(stringResource(R.string.add_provider_voice_templates_footer)) + templateNotes
-                ).joinToString("\n"),
-        ) {
-            templates.forEachIndexed { index, template ->
-                val capabilityRes = when (template.capability) {
-                    com.yujian.minis.data.model.VoiceProviderTemplate.Capability.TTS ->
-                        R.string.add_provider_voice_capability_tts
-                    com.yujian.minis.data.model.VoiceProviderTemplate.Capability.ASR ->
-                        R.string.add_provider_voice_capability_asr
-                    com.yujian.minis.data.model.VoiceProviderTemplate.Capability.BOTH ->
-                        R.string.add_provider_voice_capability_both
-                }
-                SettingsRow(
-                    title = template.name,
-                    subtitle = stringResource(capabilityRes),
-                    icon = Icons.Outlined.GraphicEq,
-                    onClick = { onSelectVoiceTemplate(template) },
-                    showDivider = index < templates.size - 1,
-                )
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-    }
-}
-
-// -- Step 2: Configure & Save --
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ConfigureProviderScreen(
+private fun AddProviderForm(
     providerType: ProviderType,
+    voiceTemplate: VoiceProviderTemplate?,
+    onProviderTypeChange: (ProviderType) -> Unit,
+    onVoiceTemplateChange: (VoiceProviderTemplate?) -> Unit,
     providerRepository: ProviderRepository,
-    voiceTemplate: com.yujian.minis.data.model.VoiceProviderTemplate? = null,
-    onBack: () -> Unit,
     onSaved: () -> Unit,
 ) {
     // Compute default label with auto-increment (e.g. "OpenAI", "OpenAI 2", ...)
     // A voice template preseeds its vendor name instead of the protocol name.
     val config by providerRepository.config.collectAsState()
-    val defaultLabel = remember(config) {
+    val defaultLabel = remember(config, voiceTemplate) {
         val baseName = voiceTemplate?.name ?: providerType.displayName
         val existingLabels = config.instances.map { it.label }.toSet()
         if (baseName !in existingLabels) baseName
@@ -250,80 +147,124 @@ private fun ConfigureProviderScreen(
     // it for typing — including non-ASCII like CJK / kana / emoji),
     // the seed is suppressed so further provider-list changes never
     // clobber what they typed. Without this gate the `remember(config)`
-    // recomputation, combined with Compose tearing down + recreating
-    // ConfigureProviderScreen on step navigation, makes the field
-    // appear to reject Chinese — the iOS root cause a user
-    // reported, with the same Android equivalent here.
+    // recomputation makes the field appear to reject Chinese — the iOS root
+    // cause a user reported, with the same Android equivalent here.
     var labelEdited by remember { mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(defaultLabel, labelEdited) {
+    LaunchedEffect(defaultLabel, labelEdited) {
         if (!labelEdited) label = defaultLabel
     }
     var apiKey by remember { mutableStateOf("") }
-    var customBaseURL by remember { mutableStateOf(voiceTemplate?.baseURL ?: "") }
 
-    SettingsScaffold(
-        title = stringResource(R.string.add_provider_configure_provider, providerType.displayName),
-        onBack = onBack,
+    // A template owns its endpoint: it arrives with a base URL already filled in
+    // and a v1 policy that matches its vendor, so the field shows the template's
+    // value until the user types. Editing it means the user is pointing the
+    // template somewhere else, which is a legitimate thing to do and no reason
+    // to stand in the way — the text field is therefore the single source of
+    // truth rather than a read-only display plus a separate editor buffer,
+    // which would desync the moment the selected template changed.
+    var customBaseURL by remember(voiceTemplate) { mutableStateOf(voiceTemplate?.baseURL ?: "") }
+
+    // ── Protocol ────────────────────────────────────────────────────────
+    // The choice the old first screen existed for, now one tap away from the
+    // fields it configures. A segmented row rather than three list rows: the
+    // labels are short, and it keeps the form the same width as the rest of
+    // settings instead of spending a whole screen on a three-way pick.
+    SettingsSection(
+        header = stringResource(R.string.add_provider_choose_provider),
+        footer = stringResource(R.string.add_provider_you_can_add_multiple_instances_of_the_sa),
     ) {
-        // Identity section — Label only. Each provider auto-suggests a
-        // unique label so users don't have to type one for the common case.
+        SettingsCardBlock {
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                addableProviderTypes.forEachIndexed { index, type ->
+                    SegmentedButton(
+                        // [T-android-add-provider-single-page] Nothing is
+                        // selected while a template is active: what the user
+                        // chose is the vendor, not the wire format, and
+                        // lighting up "OpenAI" next to an ElevenLabs preset
+                        // reads as a conflict.
+                        selected = providerType == type && voiceTemplate == null,
+                        onClick = { onProviderTypeChange(type) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = addableProviderTypes.size,
+                        ),
+                        icon = {
+                            // The check rides INSIDE the segment rather than
+                            // after it, so the three labels stay on a fixed
+                            // grid instead of shifting sideways on selection.
+                            if (providerType == type && voiceTemplate == null) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                )
+                            }
+                        },
+                    ) {
+                        Text(providerTypeLabel(type))
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Voice chat presets ──────────────────────────────────────────────
+    // [T-android-provider-voice] Not protocols but pre-filled vendor templates
+    // (base URL + seeded voice models), so they stay a list.
+    val templates = VoiceProviderTemplate.all
+    if (templates.isNotEmpty()) {
         SettingsSection(
-            header = stringResource(R.string.add_provider_identity),
-            footer = stringResource(R.string.add_provider_the_label_is_shown_in_the_provider_list_),
+            header = stringResource(R.string.add_provider_voice_chat_providers),
+            footer = (
+                listOf(stringResource(R.string.add_provider_voice_templates_footer)) +
+                    templates.mapNotNull { it.note }
+                ).joinToString("\n"),
         ) {
-            SettingsCardBlock {
-                RowLabel(text = stringResource(R.string.provider_detail_label))
-                SectionTextField(
-                    value = label,
-                    onValueChange = {
-                        label = it
-                        labelEdited = true
+            templates.forEachIndexed { index, template ->
+                val capabilityRes = when (template.capability) {
+                    VoiceProviderTemplate.Capability.TTS ->
+                        R.string.add_provider_voice_capability_tts
+                    VoiceProviderTemplate.Capability.ASR ->
+                        R.string.add_provider_voice_capability_asr
+                    VoiceProviderTemplate.Capability.BOTH ->
+                        R.string.add_provider_voice_capability_both
+                }
+                SettingsRow(
+                    title = template.name,
+                    subtitle = stringResource(capabilityRes),
+                    icon = Icons.Outlined.GraphicEq,
+                    onClick = {
+                        onVoiceTemplateChange(if (voiceTemplate == template) null else template)
                     },
-                    placeholder = providerType.displayName,
-                    singleLine = true,
+                    showDivider = index < templates.size - 1,
                 )
             }
         }
-
-        // API key is the only credential this build has.
-        ApiKeyConfigSection(
-            providerType = providerType,
-            label = label,
-            apiKey = apiKey,
-            onApiKeyChange = { apiKey = it },
-            customBaseURL = customBaseURL,
-            onCustomBaseURLChange = { customBaseURL = it },
-            providerRepository = providerRepository,
-            initialAppendV1 = voiceTemplate?.appendV1,
-            onSaved = onSaved,
-        )
-
-        Spacer(Modifier.height(24.dp))
     }
-}
 
-@Composable
-private fun ColumnScope.ApiKeyConfigSection(
-    providerType: ProviderType,
-    label: String,
-    apiKey: String,
-    onApiKeyChange: (String) -> Unit,
-    customBaseURL: String,
-    onCustomBaseURLChange: (String) -> Unit,
-    providerRepository: ProviderRepository,
-    // [T-android-provider-voice] Voice templates carry their own v1-suffix
-    // policy (e.g. MiMo appends /v1, ElevenLabs must not). null = type default.
-    initialAppendV1: Boolean? = null,
-    onSaved: () -> Unit,
-) {
-    var showApiKeyPlaintext by remember { mutableStateOf(false) }
-    var appendV1Suffix by remember {
-        mutableStateOf(initialAppendV1 ?: (providerType != ProviderType.gemini))
+    // ── Identity ────────────────────────────────────────────────────────
+    // Label only. Each provider auto-suggests a unique label so users don't have
+    // to type one for the common case.
+    SettingsSection(
+        header = stringResource(R.string.add_provider_identity),
+        footer = stringResource(R.string.add_provider_the_label_is_shown_in_the_provider_list_),
+    ) {
+        SettingsCardBlock {
+            RowLabel(text = stringResource(R.string.provider_detail_label))
+            SectionTextField(
+                value = label,
+                onValueChange = {
+                    label = it
+                    labelEdited = true
+                },
+                placeholder = providerType.displayName,
+                singleLine = true,
+            )
+        }
     }
-    // OpenAI API Format: false = Chat Completions, true = Responses API
-    var useResponsesAPI by remember { mutableStateOf(false) }
 
     // ── Credential ──────────────────────────────────────────────────────
+    // API key is the only credential this build has.
+    var showApiKeyPlaintext by remember { mutableStateOf(false) }
     val keyPlaceholder = when (providerType) {
         ProviderType.anthropic -> "sk-ant-..."
         ProviderType.openAI -> "sk-..."
@@ -338,7 +279,7 @@ private fun ColumnScope.ApiKeyConfigSection(
             RowLabel(text = stringResource(R.string.provider_list_api_key))
             SectionTextField(
                 value = apiKey,
-                onValueChange = onApiKeyChange,
+                onValueChange = { apiKey = it },
                 placeholder = keyPlaceholder,
                 singleLine = true,
                 visualTransformation = if (showApiKeyPlaintext) VisualTransformation.None else PasswordVisualTransformation(),
@@ -355,6 +296,14 @@ private fun ColumnScope.ApiKeyConfigSection(
     }
 
     // ── Endpoint ────────────────────────────────────────────────────────
+    // [T-android-provider-voice] A template's policy wins over the type
+    // default: ElevenLabs hosts its API at the root and must NOT get /v1
+    // appended, while most OpenAI-compatible relays need it. Keyed on the
+    // template so switching either one restores the other's policy instead of
+    // leaving a stale toggle behind.
+    var appendV1Suffix by remember(voiceTemplate, providerType) {
+        mutableStateOf(voiceTemplate?.appendV1 ?: (providerType != ProviderType.gemini))
+    }
     val defaultUrl = when (providerType) {
         ProviderType.gemini -> "https://generativelanguage.googleapis.com/v1beta"
         ProviderType.anthropic -> "https://api.anthropic.com"
@@ -370,14 +319,15 @@ private fun ColumnScope.ApiKeyConfigSection(
     // on the Anthropic endpoint footer so this can be discovered
     // without scraping issue threads. Default Anthropic + other
     // provider types keep their original footer copy.
-    val baseUrlFooter = if (providerType == ProviderType.gemini) {
-        stringResource(R.string.add_provider_endpoint_hint_gemini)
-    } else if (providerType == ProviderType.anthropic) {
-        stringResource(R.string.add_provider_endpoint_anthropic_hint)
-    } else if (appendV1Suffix) {
-        stringResource(R.string.add_provider_endpoint_hint_v1)
-    } else {
-        stringResource(R.string.add_provider_endpoint_hint_verbatim)
+    val baseUrlFooter = when {
+        providerType == ProviderType.gemini ->
+            stringResource(R.string.add_provider_endpoint_hint_gemini)
+        providerType == ProviderType.anthropic ->
+            stringResource(R.string.add_provider_endpoint_anthropic_hint)
+        appendV1Suffix ->
+            stringResource(R.string.add_provider_endpoint_hint_v1)
+        else ->
+            stringResource(R.string.add_provider_endpoint_hint_verbatim)
     }
     SettingsSection(
         header = stringResource(R.string.add_provider_endpoint),
@@ -387,13 +337,15 @@ private fun ColumnScope.ApiKeyConfigSection(
             RowLabel(text = stringResource(R.string.add_provider_custom_api_base_optional))
             SectionTextField(
                 value = customBaseURL,
-                onValueChange = onCustomBaseURLChange,
+                onValueChange = { customBaseURL = it },
                 placeholder = defaultUrl,
                 singleLine = true,
             )
         }
-        // Auto Append "/v1" toggle (not for Gemini — Gemini uses full path)
-        if (providerType != ProviderType.gemini) {
+        // Auto Append "/v1" toggle (not for Gemini — Gemini uses full path).
+        // Also not for a template whose endpoint the vendor fixes: the toggle
+        // would offer to break a configuration that arrived correct.
+        if (providerType != ProviderType.gemini && voiceTemplate?.appendV1 == null) {
             SettingsSwitchRow(
                 title = stringResource(R.string.add_provider_auto_append_v1_quoted),
                 checked = appendV1Suffix,
@@ -404,6 +356,8 @@ private fun ColumnScope.ApiKeyConfigSection(
     }
 
     // ── API Format (OpenAI only) ────────────────────────────────────────
+    // OpenAI API Format: false = Chat Completions, true = Responses API
+    var useResponsesAPI by remember { mutableStateOf(false) }
     if (providerType == ProviderType.openAI) {
         SettingsSection(
             header = stringResource(R.string.provider_detail_api_format),
@@ -430,7 +384,7 @@ private fun ColumnScope.ApiKeyConfigSection(
         }
     }
 
-    // ── Save button (outside any section — terminal action) ────────────
+    // ── Save (outside any section — terminal action) ────────────────────
     Spacer(Modifier.height(20.dp))
     MinisButton(
         onClick = {
@@ -473,4 +427,20 @@ private fun ColumnScope.ApiKeyConfigSection(
     ) {
         Text(stringResource(R.string.provider_list_add_provider))
     }
+}
+
+/**
+ * Short label for the protocol segmented control.
+ *
+ * [T-android-add-provider-single-page] Deliberately NOT the `add_provider_type_*`
+ * strings: those read "OpenAI / Compatible API" and blow out three equal
+ * columns. The compatibility detail is not lost — the section footer under the
+ * control still says it, and the base-URL field is right there on the same page.
+ */
+@Composable
+private fun providerTypeLabel(type: ProviderType): String = when (type) {
+    ProviderType.openAI -> stringResource(R.string.add_provider_type_openai_short)
+    ProviderType.anthropic -> stringResource(R.string.add_provider_type_anthropic_short)
+    ProviderType.gemini -> stringResource(R.string.add_provider_type_gemini_short)
+    else -> type.displayName
 }
