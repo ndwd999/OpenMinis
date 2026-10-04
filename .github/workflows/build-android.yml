@@ -204,6 +204,49 @@ jobs:
         working-directory: src/android
         run: ./gradlew :app:assemble${{ github.event.inputs.build_type || 'Release' }} --stacktrace
 
+      # `assemble` compiles only the main source set. Without the steps below a
+      # broken unit test — or an androidTest that no longer compiles — ships
+      # green, because neither source set is ever built. That is how the
+      # missing absent_since column survived a suite of passing tests: the
+      # tests were correct and simply never ran here.
+      #
+      # Targeted rather than `--tests 'ModelAbsence*'`: a pattern that matches
+      # nothing fails the build with "No tests found for given includes", which
+      # reads as a test failure instead of a typo. Naming both classes makes a
+      # rename break loudly at the right place.
+      - name: Run model-absence tests
+        working-directory: src/android
+        run: |
+          ./gradlew :app:testDebugUnitTest --stacktrace \
+            --tests 'com.yujian.minis.data.repository.ModelAbsenceGraceTest' \
+            --tests 'com.yujian.minis.data.repository.ModelAbsencePersistenceRoundTripTest'
+
+      # The whole suite has never run in CI, so it is reported rather than
+      # enforced: a pre-existing failure somewhere in the other 370 files must
+      # not mask a regression in the change under review. Flip this to a
+      # blocking step once the suite is known green.
+      - name: Run full unit test suite (non-blocking)
+        working-directory: src/android
+        continue-on-error: true
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
+
+      # Instrumented tests need a device, which this runner does not have. They
+      # are still COMPILED, so a migration test that references a renamed
+      # constant or a changed constructor fails the build instead of failing
+      # silently on the next person's machine.
+      - name: Compile instrumented tests
+        working-directory: src/android
+        run: ./gradlew :app:compileDebugAndroidTestKotlin --stacktrace
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: src/android/app/build/reports/tests/**/*.html
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
